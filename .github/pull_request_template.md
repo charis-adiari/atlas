@@ -11,6 +11,10 @@
 - [ ] Infrastructure / CI/CD
 - [ ] Performance improvement
 
+## Related Issues
+
+<!-- Link related tickets or issues. -->
+
 ## Checklist
 
 - [ ] Code follows the project's style guidelines
@@ -19,10 +23,7 @@
 - [ ] Existing tests pass locally
 - [ ] Updated documentation if needed
 - [ ] No new warnings or console errors introduced
-
-## Related Issues
-
-<!-- Link related tickets or issues. -->
+- [ ] Linked the related issue above (if one exists)
 
 ## Screenshots
 
