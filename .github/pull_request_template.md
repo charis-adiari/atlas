@@ -4,29 +4,21 @@
 
 ## Type of Change
 
-- [ ] New feature
-- [ ] Bug fix
-- [ ] Refactoring (no functional changes)
-- [ ] Documentation update
-- [ ] Infrastructure / CI/CD
-- [ ] Performance improvement
-
-## How to Test
-
-<!-- Step-by-step instructions for reviewers to verify this works. -->
-
-1.
-2.
-3.
+- [] New feature
+- [] Bug fix
+- [] Refactoring (no functional changes)
+- [] Documentation update
+- [] Infrastructure / CI/CD
+- [] Performance improvement
 
 ## Checklist
 
-- [ ] Code follows the project's style guidelines
-- [ ] Self-reviewed the code for obvious errors
-- [ ] Added or updated tests where applicable
-- [ ] Existing tests pass locally
-- [ ] Updated documentation if needed
-- [ ] No new warnings or console errors introduced
+- [] Code follows the project's style guidelines
+- [] Self-reviewed the code for obvious errors
+- [] Added or updated tests where applicable
+- [] Existing tests pass locally
+- [] Updated documentation if needed
+- [] No new warnings or console errors introduced
 
 ## Related Issues
 
