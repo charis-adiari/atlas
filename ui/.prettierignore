@@ -1,0 +1,10 @@
+# Don't format these folders
+node_modules
+.next
+build
+dist
+
+# Don't format these files
+package-lock.json
+.env
+.env.example
