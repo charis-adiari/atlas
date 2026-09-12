@@ -11,6 +11,7 @@ npm i
 ```
 
 Now run project:
+
 ```sh
 npm run dev
 ```
@@ -18,6 +19,7 @@ npm run dev
 Navigate to [http://localhost:5173/](http://localhost:5173/) to see the project.
 
 ## Template details
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
@@ -58,16 +60,15 @@ export default defineConfig([
       // other options...
     },
   },
-])
-
+]);
 ```
 
 You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
 
 ```js
 // eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+import reactX from 'eslint-plugin-react-x';
+import reactDom from 'eslint-plugin-react-dom';
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -88,6 +89,5 @@ export default defineConfig([
       // other options...
     },
   },
-])
-
+]);
 ```

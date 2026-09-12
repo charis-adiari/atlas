@@ -23,7 +23,7 @@
 - [ ] Existing tests pass locally
 - [ ] Updated documentation if needed
 - [ ] No new warnings or console errors introduced
-- [ ] Linked the related issue above (if one exists)
+- [ ] Linked the related issue(s) above (if exists)
 
 ## Screenshots
 
