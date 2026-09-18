@@ -7,7 +7,7 @@ on:
       - develop
       - 'release/**'
     paths:
-      - 'ui/**'
+      - 'atlas-ui/**'
       - '.github/workflows/frontend-ci.yml'
   push:
     branches:
@@ -15,7 +15,7 @@ on:
       - develop
       - 'release/**'
     paths:
-      - 'ui/**'
+      - 'atlas-ui/**'
       - '.github/workflows/frontend-ci.yml'
 
 env:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ui
+        working-directory: atlas-ui
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
+          cache-dependency-path: atlas-ui/package-lock.json
 
       - name: Install dependencies
         run: npm ci
