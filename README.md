@@ -33,11 +33,11 @@ This project is structured as a monorepo containing separate frontend and backen
 
 ```text
 .
-├── ui/          # Frontend application
+├── atlas-ui/          # Frontend application
 │
-├── api/         # Backend application
+├── atlas-api/         # Backend application
 │
-├── .wiki/       # Documentation
+├── .wiki/             # Documentation
 │
 └── README.md
 ```
