@@ -27,8 +27,14 @@ bin/
 nb-configuration.xml
 
 # Visual Studio Code
-.vscode
+.vscode/*
 .factorypath
+
+
+# But keep the shared project config
+!.vscode/settings.json
+!.vscode/eclipse-formatter.xml
+!.vscode/extensions.json
 
 # OSX
 .DS_Store
