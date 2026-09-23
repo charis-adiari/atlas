@@ -13,10 +13,15 @@ release.properties
 bin/
 
 # IntelliJ
-.idea
+.idea/*
 *.ipr
 *.iml
 *.iws
+
+# But keep the project-shared config
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/.gitignore
 
 # NetBeans
 nb-configuration.xml
