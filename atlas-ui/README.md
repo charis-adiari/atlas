@@ -29,8 +29,27 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Code Style Guide
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Stack:** Next.js (App Router), React, TypeScript, CSS Modules.
+
+### Components
+
+- One component per file; file name matches the component name (see [Naming](#naming)).
+- Props are typed with an explicit `interface` or `type`, named `<ComponentName>Props`. Avoid inline prop typing for anything beyond one or two trivial props.
+- Destructure props in the function signature rather than accessing via a `props` object.
+- Keep components focused on rendering; extract non-trivial logic (data transforms, calculations) into plain functions in `lib/` or into hooks, not inline in JSX or the component body.
+
+### Styling
+
+- CSS Modules, colocated with the component: `ComponentName.module.css` next to `ComponentName.tsx`.
+- Avoid inline `style={{ ... }}` except for genuinely dynamic, computed-at-runtime values (e.g. a value from a calculation). Static styling always goes in the module file.
+
+### Naming
+
+- **Component files & component names:** `PascalCase` — `UserCard.tsx` exporting `UserCard`.
+- **Non-component files** (hooks, utils, lib functions): `camelCase` - `useUserData.ts`, `formatDate.ts`.
+- **Hooks:** always prefixed `use` - `useUserData`, not `getUserData` if it's actually a hook.
+- **Route folders:** `kebab-case`, matching the URL — `app/user-settings/page.tsx`.
