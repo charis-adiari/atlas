@@ -9,7 +9,6 @@
     <codeStyleSettings language="JAVA">
       <option name="RIGHT_MARGIN" value="120" />
       <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
-      <option name="SPACE_BEFORE_METHOD_PARENTHESES" value="true" />
       <option name="SPACE_BEFORE_SYNCHRONIZED_PARENTHESES" value="false" />
     </codeStyleSettings>
   </code_scheme>

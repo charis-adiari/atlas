@@ -66,9 +66,9 @@ The frontend will be built using React + NextJS. The backend will be built using
 
 ### Documentation Comments
 
-- Javadoc (in the API) and TSDoc (in the UI) comments are required for:
+- Javadoc (in the API) and TSDoc (in the UI) comments are generally required for:
   - All classes, unless inherited from an interface/abstract class that already carries the comment.
-  - All methods, including private ones unless overriding a parent interface/abstract class method that already carries the comment.
+  - All non-constructor methods, including private ones unless overriding a parent interface/abstract class method that already carries the comment.
 - If overridden behaviour diverges meaningfully from the parent's documented contract, add a brief note.
 - No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments will be rejected outright.
 

@@ -36,12 +36,12 @@ Rancher Desktop > Containers, you should see the running container.
 Once the DB is up, run the app in dev mode (which enables live coding):
 
 ```bash
-mvn quarkus:dev
+mvn clean quarkus:dev
 ```
 
 In IntelliJ, you can add a reusable run configuration:
 - Create a maven configuration named `atlas-api`
-- For the run script, enter `quarkus:dev`
+- For the run script, enter `clean quarkus:dev`
 
 Once the app is running, you can access the Swagger UI at <localhost:8080/q/swagger-ui>.
 > **_NOTE:_**  Quarkus also now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
@@ -54,39 +54,16 @@ docker compose down
 
 This stops the container but preserves your data. To wipe the data and start fresh, run `docker compose down -v`
 
-## Related Guides
+## Code Style Guide
 
-- REST ([guide](https://quarkus.io/guides/rest)): Build RESTful web services and APIs using Jakarta REST (formerly JAX-RS)
-- Flyway ([guide](https://quarkus.io/guides/flyway)): Handle your database schema migrations
-- Http Problem ([guide](https://github.com/quarkiverse/quarkus-http-problem/blob/main/README.md)): Problem Details for HTTP APIs (RFC-7807) implementation for Quarkus / RESTeasy.
-- SmallRye OpenAPI ([guide](https://quarkus.io/guides/openapi-swaggerui)): Generate OpenAPI schemas and serve Swagger UI for REST API documentation
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- YAML Configuration ([guide](https://quarkus.io/guides/config-yaml)): Use YAML to configure your Quarkus application
-- Hibernate ORM with Panache ([guide](https://quarkus.io/guides/hibernate-orm-panache)): Simplified JPA/Hibernate data access layer with active record and repository patterns
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
+### Documentation comments
 
-## Provided Code
-
-### YAML Config
-
-Configure your application with YAML
-
-[Related guide section...](https://quarkus.io/guides/config-reference#configuration-examples)
-
-The Quarkus application configuration is located in `src/main/resources/application.yml`.
-
-### Hibernate ORM
-
-Create your first JPA entity
-
-[Related guide section...](https://quarkus.io/guides/hibernate-orm)
-
-
-[Related Hibernate with Panache section...](https://quarkus.io/guides/hibernate-orm-panache)
-
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+- Javadoc comments are required for:
+   - All classes, excluding:
+     - Classes inherited from an interface/abstract class that already carries the comment.
+     - MapStruct mappers and Panache repositories
+   - All non-constructor methods, including private ones unless overriding a parent interface/abstract class method 
+     that already carries the comment.
+- If overridden behaviour diverges meaningfully from the parent's documented contract, add a brief note.
+- No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments 
+  will be rejected outright.
