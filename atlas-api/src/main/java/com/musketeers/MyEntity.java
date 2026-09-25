@@ -1,7 +1,7 @@
 package com.musketeers;
 
-//import io.quarkus.hibernate.orm.panache.PanacheEntity;
-//import jakarta.persistence.Entity;
+import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import jakarta.persistence.Entity;
 
 
 /**
@@ -23,8 +23,7 @@ package com.musketeers;
  *     }
  * }
  */
-//@Entity
-public class MyEntity //extends PanacheEntity
-{
+@Entity
+public class MyEntity extends PanacheEntity {
     public String field;
 }

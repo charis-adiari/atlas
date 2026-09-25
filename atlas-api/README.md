@@ -1,51 +1,58 @@
 # atlas-api
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+This project uses Quarkus, the Supersonic Subatomic Java Framework. If you want to learn more about Quarkus, please 
+visit its website: <https://quarkus.io/>.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+## Environment Setup
 
-## Running the application in dev mode
+1. Copy the example file to create your own `.env`:
 
-You can run your application in dev mode that enables live coding using:
+   ```bash
+   cp .env.example .env
+   ```
 
-```shell script
+1. Fill in the actual values in `.env`. For the database password, any value will do for local dev.
+1. If you add a new environment variable, add its key (with a placeholder or blank value) to `.env.example` so others know it's needed.
+
+## Database Setup
+
+The app connects to a local PostgreSQL instance running in a container, managed via Docker Compose. It is recommended 
+to use Rancher Desktop to manage the containers. A guide to install it can be found in the 
+[onboarding doc](../.wiki/01-onboarding.md#tools-for-the-database).
+
+### 1. Start the database
+
+From the API project root run:
+
+```bash
+docker compose up -d
+```
+
+This starts a PostgreSQL container in the background. Postgres will be available at `localhost:5432`. When you open 
+Rancher Desktop > Containers, you should see the running container.
+
+### 2. Run the app
+
+Once the DB is up, run the app in dev mode (which enables live coding):
+
+```bash
 mvn quarkus:dev
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+In IntelliJ, you can add a reusable run configuration:
+- Create a maven configuration named `atlas-api`
+- For the run script, enter `quarkus:dev`
 
-## Packaging and running the application
+Once the app is running, you can access the Swagger UI at <localhost:8080/q/swagger-ui>.
+> **_NOTE:_**  Quarkus also now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
 
-The application can be packaged using:
+### Stopping the database
 
-```shell script
-mvn package
+```bash
+docker compose down
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
-
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-mvn package -Dquarkus.package.jar.type=uber-jar
-```
-
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
-
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
-mvn package -Dnative -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./target/atlas-api-1.0.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+This stops the container but preserves your data. To wipe the data and start fresh, run `docker compose down -v`
 
 ## Related Guides
 

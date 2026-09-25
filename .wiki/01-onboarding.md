@@ -103,7 +103,7 @@ Using Docker through a GUI is more convenient. Rancher Desktop is recommended.
   - Step no 7 of the guide says to leave the default settings as-is:
   ![Step 7 of setting up Rancher Desktop](./assets/Install%20Rancher%20Desktop%20step%207.png)
 
-    You can do that to [run the tests recommended by the guide](https://adamtheautomator.com/docker-rancher/#using-rancher-desktop-building-images). But dockerd runtime is recommended for this project. After you have run the tests, access the settings from File > Preferences (or `Ctrl+Comma`) and change them to use dockerd:
+    You can do that to [run the tests recommended by the guide](https://adamtheautomator.com/docker-rancher/#using-rancher-desktop-building-images). But this project uses the standard docker cli. After you have run the tests, access the settings from File > Preferences (or `Ctrl+Comma`) and change them to use the dockerd runtime:
 
   ![Rancher Desktop settings panel with dockerd runtime selected](./assets/Rancher%20Desktop%20dockerd%20runtime.png)
 
@@ -119,6 +119,7 @@ While not required, most contributors use:
 - Visual Studio Code with the ESLint/Prettier extensions for the frontend
 - IntelliJ, the free Community Edition is fine
 - pagAdmin4 for browsing and querying the database directly
+  - As of writing, pgAdmin4 v18 has a known bug that causes this error: `exception: access violation writing 0x0000000000000000` when you try to connect to a database. For now, the fix is to use pgAdmin4 v17 instead
 
 ## Next Steps
 

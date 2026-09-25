@@ -1,2 +1,24 @@
 greeting:
   message: "hello"
+
+quarkus:
+  http:
+    port: 8080
+
+"%dev":
+  quarkus:
+    datasource:
+      db-kind: postgresql
+      username: ${DB_USER}
+      password: ${DB_PASSWORD}
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/${DB_NAME}
+
+"%prod":
+  quarkus:
+    datasource:
+      db-kind: postgresql
+      username: ${DB_USER}
+      password: ${DB_PASSWORD}
+      jdbc:
+        url: ${DB_URL}
