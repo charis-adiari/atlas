@@ -20,15 +20,6 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
 ## Code Style Guide
 
 This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
@@ -53,3 +44,10 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
 - **Non-component files** (hooks, utils, lib functions): `camelCase` - `useUserData.ts`, `formatDate.ts`.
 - **Hooks:** always prefixed `use` - `useUserData`, not `getUserData` if it's actually a hook.
 - **Route folders:** `kebab-case`, matching the URL — `app/user-settings/page.tsx`.
+
+### Testing
+
+- Tests live alongside the code they test (`foo.ts` → `foo.test.ts`)
+- Name test cases by behaviour, not implementation: `it("rejects expired tokens")`, not `it("test 3")`.
+- Every test must include AAA comments (`// Arrange`, `// Act`, `// Assert`) marking each section, unless the section is empty.
+- A test coverage of 80% must be maintained

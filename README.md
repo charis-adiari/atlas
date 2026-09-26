@@ -66,7 +66,7 @@ The frontend will be built using React + NextJS. The backend will be built using
 
 ### Documentation Comments
 
-- Javadoc (in the API) and TSDoc (in the UI) comments are generally required for:
+- Javadoc and OpenAPI config (in the API) and TSDoc (in the UI) comments are generally required for:
   - All classes, unless inherited from an interface/abstract class that already carries the comment.
   - All non-constructor methods, including private ones unless overriding a parent interface/abstract class method that already carries the comment.
 - If overridden behaviour diverges meaningfully from the parent's documented contract, add a brief note.
@@ -88,12 +88,6 @@ The frontend will be built using React + NextJS. The backend will be built using
 
 - **Backend:** `var` and `any`-equivalents are not allowed except in tests.
 - **Frontend:** `any` is not allowed, except in tests.
-
-### Testing
-
-- **UI:** tests live alongside the code they test (`foo.ts` → `foo.test.ts`) and name test cases by behaviour, not implementation: `it("rejects expired tokens")`, not `it("test 3")`.
-- **API:** tests live in a mirrored `tests/` tree, not alongside source and name test cases using this format: `<<methodName>>_<<condition, if any>>_<<result>>`, e.g. `getUsers_WhenUserIsNotAdmin_ReturnsForbidden`, `getUsers_ReturnsUsers`, etc.
-- Every test must include AAA comments (`// Arrange`, `// Act`, `// Assert`) marking each section, unless the section is empty.
 
 ### Miscellaneous
 

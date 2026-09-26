@@ -56,6 +56,8 @@ This stops the container but preserves your data. To wipe the data and start fre
 
 ## Code Style Guide
 
+This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
+
 ### Documentation comments
 
 - Javadoc comments are required for:
@@ -65,5 +67,15 @@ This stops the container but preserves your data. To wipe the data and start fre
    - All non-constructor methods, including private ones unless overriding a parent interface/abstract class method 
      that already carries the comment.
 - If overridden behaviour diverges meaningfully from the parent's documented contract, add a brief note.
+- Javadoc should not be used in controllers. Rather, OpenAPI decorators should be used for class and method 
+  descriptions
 - No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments 
   will be rejected outright.
+
+### Testing
+- Tests live in a mirrored `tests/` tree
+- Test cases should be named using this format: `<<methodName>>_<<conditionIfAny>>_<<result>>`, 
+  e.g. `getUsers_WhenUserIsNotAdmin_ReturnsForbidden`, `getUsers_ReturnsUsers`, etc.
+- Every test, excluding integration tests, must include AAA comments (`// Arrange`, `// Act`, `// Assert`) marking 
+  each section, unless the section is empty.
+- A test coverage of 80% must be maintained

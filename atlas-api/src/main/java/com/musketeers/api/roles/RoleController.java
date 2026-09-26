@@ -33,12 +33,10 @@ public class RoleController {
                     responseCode = "200", content = @Content(schema = @Schema(implementation = RoleDto.class))
             ),
             @APIResponse(
-                    responseCode = "404",
-                    content = @Content(schema = @Schema(implementation = ApiProblemDetail.class))
+                    responseCode = "404", content = @Content(schema = @Schema(implementation = ApiProblemDetail.class))
             )
     })
     public RoleDto getById(@PathParam("id") Long id) {
         return roleService.getById(id);
     }
 }
-
