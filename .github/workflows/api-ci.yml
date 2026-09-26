@@ -38,6 +38,9 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
 
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
+
       - name: Build and run tests
         run: ./mvnw -B verify
 
