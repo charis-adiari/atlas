@@ -1,0 +1,30 @@
+quarkus:
+  http:
+    port: 8080
+  flyway:
+    migrate-at-start: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  rest:
+    path: /api/v1
+  smallrye-openapi:
+    info-title: Atlas
+    info-version: 1.0.0
+
+"%dev":
+  quarkus:
+    datasource:
+      db-kind: postgresql
+      username: ${DB_USER}
+      password: ${DB_PASSWORD}
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/${DB_NAME}
+
+"%prod":
+  quarkus:
+    datasource:
+      db-kind: postgresql
+      username: ${DB_USER}
+      password: ${DB_PASSWORD}
+      jdbc:
+        url: ${DB_URL}
