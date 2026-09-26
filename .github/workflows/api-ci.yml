@@ -22,7 +22,7 @@ env:
   JAVA_VERSION: '21'
 
 jobs:
-  build-and-test:
+  build-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -49,8 +49,8 @@ jobs:
       #       target/failsafe-reports
       #     retention-days: 7
 
-      - name: Package application
-        run: ./mvnw -B package -DskipTests
+      # - name: Package application
+      #   run: ./mvnw -B package -DskipTests
 
       # - name: Upload build artifact
       #   uses: actions/upload-artifact@v4
