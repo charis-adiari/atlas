@@ -12,7 +12,23 @@ quarkus:
     info-version: 1.0.0
   datasource:
     db-kind: postgresql
-    username: ${DB_USER:user}
-    password: ${DB_PASSWORD:password}
-    jdbc:
-      url: jdbc:postgresql://${DB_HOST:localhost}:5432/atlas
+
+"%dev":
+  quarkus:
+    datasource:
+      username: ${DB_USER:user}
+      password: ${DB_PASSWORD:password}
+      jdbc:
+        url: jdbc:postgresql://${DB_HOST:localhost}:5432/atlas
+    hibernate-orm:
+      log:
+        sql: true
+        format-sql: true
+
+"%prod":
+  quarkus:
+    datasource:
+      username: ${DB_USER}
+      password: ${DB_PASSWORD}
+      jdbc:
+        url: jdbc:postgresql://${DB_HOST}:5432/my_db
