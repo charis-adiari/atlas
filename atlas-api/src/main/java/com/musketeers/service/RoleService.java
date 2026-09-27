@@ -7,6 +7,9 @@ import com.musketeers.repository.RoleRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityNotFoundException;
 
+/**
+ * Operations for managing roles
+ */
 @ApplicationScoped
 public class RoleService {
     private final RoleRepository repository;

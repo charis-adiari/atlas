@@ -46,6 +46,7 @@ public class RoleControllerIntegrationTests {
             .when().get("999999")
             .then()
             .statusCode(404)
+            .contentType("application/problem+json")
             .body("statusCode", is(404))
             .body("title", equalTo("Not Found"))
             .body("detail", equalTo("Role with id 999999 not found"));
