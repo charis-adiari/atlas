@@ -20,17 +20,34 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+## Code Style Guide
 
-To learn more about Next.js, take a look at the following resources:
+This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Stack:** Next.js (App Router), React, TypeScript, CSS Modules.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Components
 
-## Deploy on Vercel
+- One component per file; file name matches the component name (see [Naming](#naming)).
+- Props are typed with an explicit `interface` or `type`, named `<ComponentName>Props`. Avoid inline prop typing for anything beyond one or two trivial props.
+- Destructure props in the function signature rather than accessing via a `props` object.
+- Keep components focused on rendering; extract non-trivial logic (data transforms, calculations) into plain functions in `lib/` or into hooks, not inline in JSX or the component body.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Styling
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- CSS Modules, colocated with the component: `ComponentName.module.css` next to `ComponentName.tsx`.
+- Avoid inline `style={{ ... }}` except for genuinely dynamic, computed-at-runtime values (e.g. a value from a calculation). Static styling always goes in the module file.
+
+### Naming
+
+- **Component files & component names:** `PascalCase` — `UserCard.tsx` exporting `UserCard`.
+- **Non-component files** (hooks, utils, lib functions): `camelCase` - `useUserData.ts`, `formatDate.ts`.
+- **Hooks:** always prefixed `use` - `useUserData`, not `getUserData` if it's actually a hook.
+- **Route folders:** `kebab-case`, matching the URL — `app/user-settings/page.tsx`.
+
+### Testing
+
+- Tests live alongside the code they test (`foo.ts` → `foo.test.ts`)
+- Name test cases by behaviour, not implementation: `it("rejects expired tokens")`, not `it("test 3")`.
+- Every test must include AAA comments (`// Arrange`, `// Act`, `// Assert`) marking each section, unless the section is empty.
+- A test coverage of 80% must be maintained
