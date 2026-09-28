@@ -1,6 +1,10 @@
+app:
+  log-format: "%d{HH:mm:ss,SSS} %-5p [%c{1.}] %X{correlationId} %s%e%n"
+
 quarkus:
   http:
     port: 8080
+    test-port: 0
   flyway:
     migrate-at-start: true
     locations: classpath:db/migration
@@ -12,6 +16,14 @@ quarkus:
     info-version: 1.0.0
   datasource:
     db-kind: postgresql
+  console:
+    color: false
+  log:
+    level: INFO
+    console:
+      format: ${app.log-format}
+    file:
+      format: ${app.log-format}
 
 "%dev":
   quarkus:
@@ -24,6 +36,8 @@ quarkus:
       log:
         sql: true
         format-sql: true
+    console:
+      color: true
 
 "%prod":
   quarkus:
@@ -32,3 +46,11 @@ quarkus:
       password: ${DB_PASSWORD}
       jdbc:
         url: ${DB_URL}
+    log:
+      console:
+      file:
+        path: "./logs/app.log" #TODO: Fix when we spin up prod environment
+        rotation:
+          max-file-size: 10M
+          max-backup-index: 5
+          file-suffix: .yyyy-MM-dd
