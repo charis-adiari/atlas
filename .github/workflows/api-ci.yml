@@ -51,23 +51,3 @@ jobs:
           name: jacoco-report
           path: atlas-api/target/jacoco-report/
           retention-days: 7
-
-      # - name: Upload test reports
-      #   if: always()
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: test-reports
-      #     path: |
-      #       target/surefire-reports
-      #       target/failsafe-reports
-      #     retention-days: 7
-
-      # - name: Package application
-      #   run: ./mvnw -B package -DskipTests
-
-      # - name: Upload build artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: app-jar
-      #     path: target/quarkus-app/
-      #     retention-days: 7
