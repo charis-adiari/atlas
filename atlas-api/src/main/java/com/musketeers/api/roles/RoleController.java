@@ -3,6 +3,7 @@ package com.musketeers.api.roles;
 import com.musketeers.api.middleware.ApiProblemDetail;
 import com.musketeers.dto.RoleDto;
 import com.musketeers.service.RoleService;
+import io.quarkus.logging.Log;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -37,6 +38,7 @@ public class RoleController {
             )
     })
     public RoleDto getById(@PathParam("id") Long id) {
+        Log.info("Getting role with ID: " + id);
         return roleService.getById(id);
     }
 }
