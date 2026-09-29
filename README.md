@@ -58,20 +58,6 @@ The frontend will be built using React + NextJS. The backend will be built using
 
 **Scope:** These rules are binding for the entire repo including the UI and API subfolders, unless a subfolder contains its own code style guide that explicitly overrides a specific rule.
 
-### Formatting
-
-- **UI`:** Prettier + ESLint. Run before opening a PR as CI fails on violations.
-- **API:** Formatting is handled via IDE config, provided for IntelliJ and VS Code. Use the provided config rather than your own IDE defaults.
-- Do not manually override automated formatting
-
-### Documentation Comments
-
-- Javadoc and OpenAPI config (in the API) and TSDoc (in the UI) comments are generally required for:
-  - All classes, unless inherited from an interface/abstract class that already carries the comment.
-  - All non-constructor methods, including private ones unless overriding a parent interface/abstract class method that already carries the comment.
-- If overridden behaviour diverges meaningfully from the parent's documented contract, add a brief note.
-- No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments will be rejected outright.
-
 ### Code Size Limits
 
 - **Methods:** maximum 60 lines Approaching this is a sign to extract helper methods.
@@ -83,11 +69,6 @@ The frontend will be built using React + NextJS. The backend will be built using
 - **Constants:** always `SCREAMING_SNAKE_CASE`.
 - **Booleans:** must start with a verb signalling yes/no - `is`, `has`, `can` (e.g. `isActive`, `hasPermission`). Do not use bare names like `active`.
 - Names should not encode which subfolder they live in (no `uiUserCard`, no `apiUserService`).
-
-### Type Safety
-
-- **Backend:** `var` and `any`-equivalents are not allowed except in tests.
-- **Frontend:** `any` is not allowed, except in tests.
 
 ### Miscellaneous
 

@@ -1,17 +1,17 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a project using [Next.js](https://nextjs.org) (App Router), React, TypeScript and CSS Modules bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Now you can run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -24,7 +24,22 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
 
-**Stack:** Next.js (App Router), React, TypeScript, CSS Modules.
+### Formatting
+
+Prettier + ESLint are used for formatting. Run before opening a PR as CI fails on violations:
+
+```bash
+npm run lint
+npm run prettier
+```
+
+### Documentation Comments
+
+- TSDoc comments are generally required for:
+  - All classes, unless inherited from an interface/abstract class that already carries the comment.
+  - All non-constructor methods, including private ones unless overriding a parent interface/abstract class method that already carries the comment.
+- If overridden behaviour diverges meaningfully from the parent's documented contract, add comments for the child class.
+- No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments will be rejected outright.
 
 ### Components
 
@@ -35,15 +50,17 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
 
 ### Styling
 
-- CSS Modules, colocated with the component: `ComponentName.module.css` next to `ComponentName.tsx`.
 - Avoid inline `style={{ ... }}` except for genuinely dynamic, computed-at-runtime values (e.g. a value from a calculation). Static styling always goes in the module file.
 
-### Naming
+### Naming Conventions
 
-- **Component files & component names:** `PascalCase` — `UserCard.tsx` exporting `UserCard`.
-- **Non-component files** (hooks, utils, lib functions): `camelCase` - `useUserData.ts`, `formatDate.ts`.
+- Casing generally follows the React + Next.js conventions.
 - **Hooks:** always prefixed `use` - `useUserData`, not `getUserData` if it's actually a hook.
 - **Route folders:** `kebab-case`, matching the URL — `app/user-settings/page.tsx`.
+
+### Type Safety
+
+- `any` is not allowed, except in tests.
 
 ### Testing
 

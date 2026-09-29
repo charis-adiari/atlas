@@ -56,7 +56,12 @@ This stops the container but preserves your data. To wipe the data and start fre
 
 ## Code Style Guide
 
-This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
+This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the API subfolder.
+
+### Formatting
+
+- Formatting is handled via IDE config, provided for IntelliJ and VS Code. Use the provided config rather than your own IDE defaults.
+- Do not manually override automated formatting
 
 ### Documentation comments
 
@@ -71,6 +76,10 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
   descriptions
 - No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments 
   will be rejected outright.
+
+### Type Safety
+
+- `var` and `any`-equivalents are not allowed except in tests.
 
 ### Testing
 - Tests live in a mirrored `tests/` tree
