@@ -1,5 +1,6 @@
 package com.musketeers.api.middleware;
 
+import io.quarkus.logging.Log;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
@@ -19,6 +20,8 @@ public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
              case IllegalArgumentException e -> ApiProblemDetail.badRequest(e.getMessage());
             default -> ApiProblemDetail.internalServerError("An unexpected error occurred.");
         };
+
+        Log.warn(exception.getMessage());
 
         return Response.status(problem.getStatusCode())
                 .type("application/problem+json")

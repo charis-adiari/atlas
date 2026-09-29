@@ -1,5 +1,0 @@
-quarkus:
-  rest:
-    path: /api/v1
-  http:
-    test-port: 0

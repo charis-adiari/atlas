@@ -13,9 +13,11 @@
 
 ## Related Issues
 
-<!-- Link related tickets or issues.
-     Prefix with "Closes" (e.g. "Closes #123") if this PR fully resolves the issue - it will auto-close and move to Done when this PR merges.
-     Otherwise just reference it plainly (e.g. "#123") to link it without closing it. -->
+<!-- 
+  Link related tickets or issues.
+  Prefix with "Closes" (e.g. "Closes #123") if this PR fully resolves the issue - it will auto-close and move to Done when this PR merges.
+  Otherwise just reference it plainly (e.g. "#123") to link it without closing it. 
+-->
 
 ## Checklist
 

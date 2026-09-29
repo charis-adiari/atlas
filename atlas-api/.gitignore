@@ -56,3 +56,4 @@ nb-configuration.xml
 .certs/
 
 *.log
+log

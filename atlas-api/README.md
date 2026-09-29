@@ -1,7 +1,13 @@
 # atlas-api
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework. If you want to learn more about Quarkus, please 
-visit its website: <https://quarkus.io/>.
+This project uses Java Quarkus.
+
+## Table of Contents
+1. [Environment Setup](#environment-setup)
+1. [Database Setup](#database-setup)
+1. [Code Style Guide](#code-style-guide)
+
+---
 
 ## Environment Setup
 
@@ -58,6 +64,12 @@ This stops the container but preserves your data. To wipe the data and start fre
 
 This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
 
+### Formatting
+
+- Formatting is handled via IDE config, provided for IntelliJ and VS Code. Use the provided config rather than your 
+  own IDE defaults.
+- Do not manually override automated formatting
+
 ### Documentation comments
 
 - Javadoc comments are required for:
@@ -71,6 +83,29 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
   descriptions
 - No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments 
   will be rejected outright.
+
+### Code Size Limits
+
+- **Methods:** maximum 60 lines. Approaching this is a sign to extract helper methods.
+- **Classes:** ideally 100–300 lines. Classes over 500 lines will have their PR rejected outright.
+
+### Naming Conventions
+
+- Casing should follow Java and Quarkus conventions.
+- **Constants:** always `SCREAMING_SNAKE_CASE`.
+- **Booleans:** must start with a verb signalling yes/no - `is`, `has`, `can` (e.g. `isActive`, `hasPermission`). Do 
+  not use bare names like `active`.
+- SQL commands should be UPPERCASE and names should be in `snake_case`.
+- Names should not encode which subfolder they live in (no `uiUserCard`, no `apiUserService`).
+
+### Type Safety
+
+- `var` and `any`-equivalents are not allowed except in tests.
+
+### Miscellaneous
+
+- **Folder size:** past 5 files, split a folder into subfolders by responsibility. On the other hand, 5 folders with 1 file each should be questioned.
+- PRs should stay under 30 changed files. Anything over 50 is as a symptom of poor planning.
 
 ### Testing
 - Tests live in a mirrored `tests/` tree
