@@ -62,7 +62,7 @@ This stops the container but preserves your data. To wipe the data and start fre
 
 ## Code Style Guide
 
-This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
+This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the API subfolder.
 
 ### Formatting
 
@@ -78,34 +78,20 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
      - MapStruct mappers and Panache repositories
    - All non-constructor methods, including private ones unless overriding a parent interface/abstract class method 
      that already carries the comment.
-- If overridden behaviour diverges meaningfully from the parent's documented contract, add a brief note.
+- If overridden behaviour diverges meaningfully from the parent's documented contract, add comments for the child class.
 - Javadoc should not be used in controllers. Rather, OpenAPI decorators should be used for class and method 
   descriptions
 - No other kinds of comments should be left in code. Write code that is readable with obvious names. PRs with comments 
   will be rejected outright.
 
-### Code Size Limits
-
-- **Methods:** maximum 60 lines. Approaching this is a sign to extract helper methods.
-- **Classes:** ideally 100–300 lines. Classes over 500 lines will have their PR rejected outright.
-
 ### Naming Conventions
 
 - Casing should follow Java and Quarkus conventions.
-- **Constants:** always `SCREAMING_SNAKE_CASE`.
-- **Booleans:** must start with a verb signalling yes/no - `is`, `has`, `can` (e.g. `isActive`, `hasPermission`). Do 
-  not use bare names like `active`.
 - SQL commands should be UPPERCASE and names should be in `snake_case`.
-- Names should not encode which subfolder they live in (no `uiUserCard`, no `apiUserService`).
 
 ### Type Safety
 
 - `var` and `any`-equivalents are not allowed except in tests.
-
-### Miscellaneous
-
-- **Folder size:** past 5 files, split a folder into subfolders by responsibility. On the other hand, 5 folders with 1 file each should be questioned.
-- PRs should stay under 30 changed files. Anything over 50 is as a symptom of poor planning.
 
 ### Testing
 - Tests live in a mirrored `tests/` tree
