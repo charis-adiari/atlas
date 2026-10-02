@@ -22,8 +22,8 @@ Turn one Atlas user story into a small, ordered set of technical tasks a develop
 2. **Confirm the match.** If no story matches, multiple stories plausibly match, or the requested name is not clear, ask one concise question to identify the intended story. Do not guess.
 3. **Locate the examples.** Find and read the two task breakdowns the user refers to. If they are not accessible in the workspace or conversation, ask one question for their location or whether the user wants to proceed without them. Do not silently skip this requested guidance.
 4. **Inspect relevant implementation context.** Follow the story's dependencies and requirement links only as far as needed. Check for existing code and tests that affect the task design; avoid broad repository exploration.
-5. **Check for material ambiguity.** Identify unresolved product or technical decisions that would change scope, behavior, data/API contracts, or the task breakdown. Ask exactly one focused question per assistant turn, starting with the decision that has the greatest impact. Wait for the answer, then reassess and ask another question only if needed. Do not bundle questions, present a questionnaire, or draft tasks while a material decision remains unresolved.
-6. **Use judgment for non-material choices.** Resolve ordinary implementation details from repository conventions. State any consequential but non-blocking assumptions in the final breakdown instead of interrupting the user.
+5. **Check for material ambiguity.** Identify unresolved product or technical decisions that would change scope, behaviour, data/API contracts, or the task breakdown. Ask exactly one focused question per assistant turn, starting with the decision that has the greatest impact. Wait for the answer, then reassess and ask another question only if needed. Do not bundle questions, present a questionnaire, or draft tasks while a material decision remains unresolved.
+6. **Use judgement for non-material choices.** Resolve ordinary implementation details from repository conventions. State any consequential but non-blocking assumptions in the final breakdown instead of interrupting the user.
 7. **Draft and size tasks.** Break the story into ordered, coherent implementation tasks. Each task must be independently actionable and estimated between 0.5 and 2 developer days, inclusive. Include implementation and its appropriate tests in the estimate. Split work that exceeds 2 days; combine fragments smaller than 0.5 days with a closely related task when that remains coherent.
 8. **Check coverage and order.** Ensure the tasks collectively cover the story's acceptance criteria, respect dependencies, and include validation. Do not add unrelated work, duplicate existing functionality, or invent requirements. Call out external blockers rather than hiding them inside an estimate.
 
@@ -31,12 +31,12 @@ Turn one Atlas user story into a small, ordered set of technical tasks a develop
 
 Ask before breaking down the story when its wording leaves a consequential choice open, for example:
 
-- Different interpretations would produce materially different user-visible behavior.
+- Different interpretations would produce materially different user-visible behaviour.
 - A missing policy affects data integrity, permissions, persistence, compatibility, or failure recovery.
 - Acceptance criteria conflict with each other or with a linked requirement.
 - The repository cannot establish an important architectural constraint and choosing incorrectly would cause rework.
 
-Ask one neutral, answerable question at a time. Briefly explain the specific decision it resolves. Do not ask the user to choose routine implementation mechanics that can be inferred from the existing codebase. Continue the clarification loop until the scope and technical behavior are sufficiently clear to produce tasks.
+Ask one neutral, answerable question at a time. Briefly explain the specific decision it resolves. Do not ask the user to choose routine implementation mechanics that can be inferred from the existing codebase. Continue the clarification loop until the scope and technical behaviour are sufficiently clear to produce tasks.
 
 ## Output
 
@@ -44,10 +44,10 @@ Follow the user's example breakdowns when available. Otherwise, use this compact
 
 ### US-## — Story name
 
-**Scope:** One-sentence summary of the behavior being delivered.
+**Scope:** One-sentence summary of the behaviour being delivered.
 
 1. **Task title** — Estimate: 0.5–2 days
-   - **Deliverable:** Concrete code or behavior the developer will produce.
+   - **Deliverable:** Concrete code or behaviour the developer will produce.
    - **Acceptance checks:** Observable completion conditions, including relevant tests.
    - **Depends on:** Earlier task IDs or story dependencies, if any.
 

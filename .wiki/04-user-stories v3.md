@@ -77,9 +77,9 @@
 **As a** user, **I want** to permanently delete a vault, **so that** I can remove workspaces I no longer need.
 - **Context:** FR-006, UC-06
 - **Acceptance Criteria:**
-  1. **Given** a user selects "Delete Vault," **when** the confirmation dialog appears, **then** it states how many notes/canvases will be permanently lost.
-  2. **Given** the confirmation dialog, **when** the user confirms, **then** the vault and all its contents are permanently deleted.
-  3. **Given** the confirmation dialog, **when** the user cancels, **then** no action is taken.
+  1. **Given** a user selects "Delete Vault," **when** the confirmation dialogue appears, **then** it states how many notes/canvases will be permanently lost.
+  2. **Given** the confirmation dialogue, **when** the user confirms, **then** the vault and all its contents are permanently deleted.
+  3. **Given** the confirmation dialogue, **when** the user cancels, **then** no action is taken.
   4. **Given** a user deletes their only remaining vault, **when** the deletion completes, **then** they see a zero-vault empty state prompting creation of a new one.
 - **Dependencies:** US-05
 - **Priority:** Must
@@ -103,7 +103,7 @@
 **As a** user, **I want** to create a new Markdown note, **so that** I can start organizing my thoughts in structured form.
 - **Context:** FR-008, UC-08
 - **Acceptance Criteria:**
-  1. **Given** a user viewing a vault, **when** they select "New Note," **then** an empty Note is created and opened for editing immediately, with no dialog.
+  1. **Given** a user viewing a vault, **when** they select "New Note," **then** an empty Note is created and opened for editing immediately, with no dialogue.
   2. **Given** a name collision with an existing file at the same folder level, **when** a new Note is created, **then** the system auto-suffixes the name rather than blocking creation.
 - **Dependencies:** US-08
 - **Priority:** Must
@@ -113,7 +113,7 @@
 **As a** user, **I want** to create a new canvas, **so that** I can start capturing unstructured ideas visually.
 - **Context:** FR-009, UC-09
 - **Acceptance Criteria:**
-  1. **Given** a user viewing a vault, **when** they select "New Canvas," **then** an empty Canvas is created and opened immediately, with no onboarding or dialog.
+  1. **Given** a user viewing a vault, **when** they select "New Canvas," **then** an empty Canvas is created and opened immediately, with no onboarding or dialogue.
   2. **Given** a name collision with an existing file at the same folder level, **when** a new Canvas is created, **then** the system auto-suffixes the name rather than blocking creation.
 - **Dependencies:** US-08
 - **Priority:** Must
@@ -155,7 +155,7 @@
 - **Estimated Effort:** M
 
 ### US-14 — Delete a canvas
-**As a** user, **I want** deleting a canvas to follow the same simple rule as deleting a note, **so that** the behavior is predictable everywhere.
+**As a** user, **I want** deleting a canvas to follow the same simple rule as deleting a note, **so that** the behaviour is predictable everywhere.
 - **Context:** FR-013, UC-13
 - **Acceptance Criteria:**
   1. **Given** a canvas with no incoming links/embeds, **when** the user deletes it, **then** it is deleted immediately with no confirmation prompt.
@@ -167,7 +167,7 @@
 - **Estimated Effort:** M
 
 ### US-15 — Delete a folder
-**As a** user, **I want** deleting a folder to follow the same link-handling rule as deleting individual files, **so that** the behavior stays consistent and predictable.
+**As a** user, **I want** deleting a folder to follow the same link-handling rule as deleting individual files, **so that** the behaviour stays consistent and predictable.
 - **Context:** FR-014, UC-14
 - **Acceptance Criteria:**
   1. **Given** a folder whose contents have no incoming links, **when** the user deletes it, **then** the folder and its contents are deleted immediately with no confirmation prompt.
@@ -186,7 +186,7 @@
 **As a** user, **I want** to double-click a blank canvas and start typing immediately, **so that** nothing gets between me and capturing a thought.
 - **Context:** FR-015, UC-15
 - **Acceptance Criteria:**
-  1. **Given** an open canvas, **when** the user double-clicks a blank area, **then** a new text element is created at that position, ready for input, with no dialog.
+  1. **Given** an open canvas, **when** the user double-clicks a blank area, **then** a new text element is created at that position, ready for input, with no dialogue.
   2. **Given** a newly created text element, **when** the user clicks away without typing anything, **then** the empty element is discarded.
 - **Dependencies:** US-10
 - **Priority:** Must
@@ -390,7 +390,7 @@
 **As a** user, **I want** to remove a link or embed without extra confirmation, **so that** cleaning up references stays lightweight (I can always undo).
 - **Context:** FR-030, UC-32
 - **Acceptance Criteria:**
-  1. **Given** an existing link or embed, **when** the user triggers "Remove Link"/"Unlink," **then** the reference is removed instantly with no confirmation dialog.
+  1. **Given** an existing link or embed, **when** the user triggers "Remove Link"/"Unlink," **then** the reference is removed instantly with no confirmation dialogue.
   2. **Given** a link/embed was just removed, **when** the underlying content on both sides is checked, **then** it remains fully intact and unaffected.
   3. **Given** a link/embed was just removed, **when** the user triggers undo, **then** the link/embed is restored.
 - **Dependencies:** US-25, US-28, US-29, US-30
@@ -502,7 +502,7 @@
   2. **Given** an action was just undone, **when** the user triggers redo, **then** the action is reapplied.
   3. **Given** the app is reloaded, **when** the user checks undo history, **then** no persistence across reloads/sessions is required.
 - **Dependencies:** None
-- **Priority:** Should *(explicitly deprioritized by product owner relative to other work)*
+- **Priority:** Should *(explicitly de-prioritised by product owner relative to other work)*
 - **Estimated Effort:** L *(often underestimated — needs a consistent action-history model across both canvas and note editors)*
 
 ---
