@@ -278,7 +278,7 @@
 - **Estimated Effort:** M
 
 ### US-14 — Delete a canvas
-**As a** user, **I want** deleting a canvas to follow the same simple rule as deleting a note, **so that** the behavior is predictable everywhere.
+**As a** user, **I want** deleting a canvas to follow the same simple rule as deleting a note, **so that** the behaviour is predictable everywhere.
 - **Context:**
   Preconditions: Canvas exists  
   1. User selects "Delete" on a canvas  
@@ -301,7 +301,7 @@
 - **Estimated Effort:** M
 
 ### US-15 — Delete a folder
-**As a** user, **I want** deleting a folder to follow the same link-handling rule as deleting individual files, **so that** the behavior stays consistent and predictable.
+**As a** user, **I want** deleting a folder to follow the same link-handling rule as deleting individual files, **so that** the behaviour stays consistent and predictable.
 - **Context:**
   Preconditions: Folder exists and contains one or more files/subfolders  
   1. User selects "Delete" on a folder  
@@ -333,7 +333,7 @@
   Preconditions: Canvas file is open  
   1. User double-clicks a blank area of the canvas  
      1.1. Alternatively, the user selects a "Text" tool from a toolbar instead of double-clicking → same result  
-  2. System creates a new text element at that position, ready for input immediately — no dialog, no tool selection required  
+  2. System creates a new text element at that position, ready for input immediately — no dialogue, no tool selection required  
   3. User types content  
   4. User clicks away or presses Escape to finish editing  
      4.1. If user clicks away without typing anything → the empty element is discarded, not saved, keeping the canvas clean  
@@ -568,7 +568,7 @@
   1. User edits the note in a way that removes the linked block (normal editing, not an explicit delete action)  
   2. System shows the confirm-before-delete prompt, as used for explicit deletions elsewhere  
   3. Edit proceeds; the canvas element's link is removed or shown as broken, depending on the user's choice  
-  Note: this is a deliberate tradeoff — normal editing that touches a linked block interrupts with a prompt, which is in tension with the "get out of the way" principle. Worth revisiting once seen in a prototype.
+  Note: this is a deliberate trade-off — normal editing that touches a linked block interrupts with a prompt, which is in tension with the "get out of the way" principle. Worth revisiting once seen in a prototype.
 
   Links to FR-024 (exception)
 - **Acceptance Criteria:**
@@ -699,7 +699,7 @@
   Preconditions: A link or embed exists  
   1. User selects the linked canvas element, or the embed block in the note  
   2. User triggers "Remove Link" / "Unlink"  
-     2.1. Removal is instant, with no confirmation dialog; undo/redo (US-42) is the safety net for accidental unlinks  
+     2.1. Removal is instant, with no confirmation dialogue; undo/redo (US-42) is the safety net for accidental unlinks  
   3. System removes the link/embed reference only  
   4. For a canvas-element link: the element remains on the canvas, simply no longer linked (loses its link indicator)  
   5. For a note embed: the embed block is removed from the note (the preview disappears), but the source canvas content is untouched  
@@ -736,7 +736,7 @@
 **As a** user, **I want** to relink or remove a broken reference, **so that** I can clean up my vault after deleting something that was still linked.
 - **Context:**
   Preconditions: A link or embed exists whose target was deleted (e.g. the user previously chose "keep as broken" rather than remove), or otherwise became invalid  
-  1. User sees a broken-link indicator — a grayed-out badge on a canvas element, or a "⚠ Missing content" placeholder where a note embed used to render  
+  1. User sees a broken-link indicator — a greyed-out badge on a canvas element, or a "⚠ Missing content" placeholder where a note embed used to render  
      1.1. Alternatively, the user ignores the broken indicator and keeps working → it persists indefinitely until addressed, with no forced resolution  
   2. User clicks the broken indicator  
   3. System presents two options: Relink (pick a new target) or Remove (delete the dangling reference)  
