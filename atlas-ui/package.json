@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "prettier": "prettier . --write"
   },
   "dependencies": {
+    "material-symbols": "^0.48.0",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8"

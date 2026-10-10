@@ -1,0 +1,42 @@
+.sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  width: 20%;
+  min-width: 16rem;
+  padding: 0.625rem 1rem;
+  background: var(--background-light);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.625rem;
+
+  .logo {
+    width: 3.75rem;
+    height: 0.875rem;
+  }
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.btnFullWidth {
+  width: 100%;
+  justify-content: left;
+  gap: 0.625rem;
+}

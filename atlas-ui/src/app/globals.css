@@ -1,6 +1,15 @@
 :root {
   --background: hsl(228, 33%, 6%);
+  --background-light: hsl(220, 41%, 7%);
+  --background-light-2: #121522;
+  --background-light-3: #1A1F2F;
+  --background-light-4: #23293D;
+
   --text: hsl(0, 0%, 100%);
+
+  --primary: #7d43fc;
+  --secondary: #f3c555;
+  --accent: #48e083;
 }
 
 html {
