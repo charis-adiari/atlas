@@ -1,5 +1,15 @@
 app:
   log-format: "%d{HH:mm:ss,SSS} %-5p [%c{1.}] %X{correlationId} %s%e%n"
+  auth:
+    issuer: atlas
+    token-ttl: PT1H
+    bcrypt-cost: 12
+
+smallrye:
+  jwt:
+    sign:
+      key:
+        location: privateKey.pem
 
 quarkus:
   http:
@@ -37,17 +47,19 @@ quarkus:
     http:
       cors:
         origins: http://localhost:5173
-    datasource:
-      username: ${DB_USER:user}
-      password: ${DB_PASSWORD:password}
-      jdbc:
-        url: ${DB_URL}
+    # No datasource block here on purpose: Quarkus Dev Services starts a
+    # throw-away Postgres container and sets the URL and credentials itself.
     hibernate-orm:
       log:
         sql: true
         format-sql: true
     console:
       color: true
+
+"%test":
+  app:
+    auth:
+      bcrypt-cost: 4
 
 "%prod":
   quarkus:

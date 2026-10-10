@@ -1,5 +1,6 @@
 package com.musketeers.api.middleware;
 
+import com.musketeers.exception.SignupFailedException;
 import io.quarkus.logging.Log;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.ws.rs.core.Response;
@@ -18,6 +19,7 @@ public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
         ApiProblemDetail problem = switch (exception) {
             case EntityNotFoundException e -> ApiProblemDetail.notFound(e.getMessage());
              case IllegalArgumentException e -> ApiProblemDetail.badRequest(e.getMessage());
+            case SignupFailedException e -> ApiProblemDetail.conflict(e.getMessage());
             default -> ApiProblemDetail.internalServerError("An unexpected error occurred.");
         };
 

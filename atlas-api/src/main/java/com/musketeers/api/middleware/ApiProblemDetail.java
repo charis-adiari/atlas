@@ -1,23 +1,33 @@
 package com.musketeers.api.middleware;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.ws.rs.core.Response;
+
+import java.util.Map;
 
 /**
  * Minimal Problem Details (RFC 9457) shape: just status, title and detail. Used instead of HttpProblem directly, since
- * HttpProblem auto-populates additional fields (e.g. "instance") that we don't want surfaced here.
+ * HttpProblem auto-populates additional fields (e.g. "instance") that we don't want surfaced here. Validation
+ * failures additionally carry one message per field in "errors", which is left out of the response when empty.
  */
 public final class ApiProblemDetail {
     private ApiProblemDetail() {}
 
     public ApiProblemDetail(int statusCode, String title, String detail) {
+        this(statusCode, title, detail, null);
+    }
+
+    public ApiProblemDetail(int statusCode, String title, String detail, Map<String, String> errors) {
         this.statusCode = statusCode;
         this.title = title;
         this.detail = detail;
+        this.errors = errors;
     }
 
     private int statusCode;
     private String title;
     private String detail;
+    private Map<String, String> errors;
 
     public int getStatusCode() {
         return statusCode;
@@ -29,6 +39,11 @@ public final class ApiProblemDetail {
 
     public String getDetail() {
         return detail;
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Map<String, String> getErrors() {
+        return errors;
     }
 
     /**
@@ -48,11 +63,28 @@ public final class ApiProblemDetail {
     }
 
     /**
+     * Creates a problem details with response status set to 400 - bad request, listing what is wrong per field
+     * @param detail A human-readable description of the problem
+     * @param errors Message for each invalid field, keyed by field name
+     */
+    public static ApiProblemDetail badRequest(String detail, Map<String, String> errors) {
+        return new ApiProblemDetail(Response.Status.BAD_REQUEST.getStatusCode(), "Bad Request", detail, errors);
+    }
+
+    /**
      * Creates a problem details with response status set to 403 - forbidden
      * @param detail A human-readable description of the problem
      */
     public static ApiProblemDetail forbidden(String detail) {
         return build(Response.Status.FORBIDDEN, "Forbidden", detail);
+    }
+
+    /**
+     * Creates a problem details with response status set to 409 - conflict
+     * @param detail A human-readable description of the problem
+     */
+    public static ApiProblemDetail conflict(String detail) {
+        return build(Response.Status.CONFLICT, "Conflict", detail);
     }
 
     /**
