@@ -1,0 +1,63 @@
+.dropdown {
+  display: inline-block;
+}
+
+.menu {
+  /* Popovers have default UA styles (centred, inset, border), so reset them */
+  margin: 0;
+  inset: auto;
+
+  /* Anchor positioning: place below the trigger, aligned to its left edge */
+  position-area: bottom span-right;
+  margin-top: 0.75rem;
+  min-width: anchor-size(width);
+
+  padding: 0.25rem;
+  background: var(--background-light-2);
+  border: 1px solid var(--background-light-3);
+  border-radius: 0.375rem;
+
+  /* [popover] is display:none when closed, so only set display when open */
+  &:popover-open {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .item {
+    width: 100%;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--background-light-3);
+    }
+
+    .trailing {
+      margin-left: auto;
+      /* pushes it to the right edge */
+      padding-left: 3rem;
+      /* minimum space from the label when the menu is narrow */
+      color: var(--text-muted);
+      font-size: 0.85em;
+    }
+  }
+}
+
+.trigger {
+  padding-right: 0.875rem;
+
+  .chevron {
+    font-size: 1.15rem;
+    margin-left: auto;
+    transition: transform 200ms ease-in;
+  }
+
+  &:has(+ .menu:popover-open) .chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

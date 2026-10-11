@@ -40,3 +40,11 @@
   justify-content: left;
   gap: 0.625rem;
 }
+
+.keyboardShortcut {
+  background: var(--background-light-3);
+  border-radius: 0.125rem;
+  padding: 1px 0.3125rem;
+  font-size: 0.8rem;
+  font-family: 'DM Mono', monospace;
+}

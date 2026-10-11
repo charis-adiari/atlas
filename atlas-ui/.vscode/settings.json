@@ -1,0 +1,6 @@
+{
+  "js/ts.preferences.preferTypeOnlyAutoImports": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  }
+}

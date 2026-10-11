@@ -1,0 +1,12 @@
+select {
+  align-items: center;
+  background: var(--background-light-2);
+  border-radius: 0.375rem;
+  border: 1px solid var(--background-light-3);
+  color: var(--text);
+  display: flex;
+  gap: 0.375rem;
+  outline: none;
+  padding: 0.375rem 1rem;
+  font-size: 1rem;
+}
