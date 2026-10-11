@@ -1,5 +1,5 @@
-import { LocalVaultStore } from "./localVaultStore";
-import { VaultStore } from "./types";
+import { LocalVaultStore } from './localVaultStore';
+import { VaultStore } from './types';
 
 const localStore = new LocalVaultStore();
 

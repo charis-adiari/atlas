@@ -105,8 +105,9 @@ export const ButtonDropdown = ({
         {label}
         {showDropdownArrow && (
           <span className={`material-symbols-rounded ${styles.chevron}`} aria-hidden="true">
-          keyboard_arrow_down
-        </span>)}
+            keyboard_arrow_down
+          </span>
+        )}
       </Button>
 
       <div

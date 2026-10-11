@@ -1,14 +1,9 @@
-
 export const Header = () => {
-  return(
+  return (
     <header>
-      <div className="header-start">
-      Search this vault...
-      </div>
+      <div className="header-start">Search this vault...</div>
 
-      <div className="header-end">
-        Log in button
-      </div>
+      <div className="header-end">Log in button</div>
     </header>
   );
-}
+};

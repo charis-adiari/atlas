@@ -1,10 +1,10 @@
+import { Header } from '@/components/Header';
+import { Sidebar } from '@/components/Sidebar/Sidebar';
+import 'material-symbols/rounded.css';
 import type { Metadata } from 'next';
-import { Manrope, DM_Mono } from "next/font/google";
+import { DM_Mono, Manrope } from 'next/font/google';
 import './globals.css';
 import './styles/inputs.css';
-import { Header } from '@/components/Header';
-import "material-symbols/rounded.css";
-import { Sidebar } from '@/components/Sidebar/Sidebar';
 
 const manrope = Manrope({
   variable: '--font-manrope',
@@ -12,7 +12,7 @@ const manrope = Manrope({
 });
 
 const dmMono = DM_Mono({
-  weight: ["400"],
+  weight: ['400'],
   subsets: ['latin']
 });
 

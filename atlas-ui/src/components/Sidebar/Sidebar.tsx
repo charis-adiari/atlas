@@ -10,17 +10,29 @@ export const Sidebar = () => {
     {
       label: 'New note',
       icon: 'notes',
-      trailing: <kbd aria-hidden="true" className={styles.keyboardShortcut}>N</kbd>
+      trailing: (
+        <kbd aria-hidden="true" className={styles.keyboardShortcut}>
+          N
+        </kbd>
+      )
     },
-    { 
-      label: 'New canvas', 
+    {
+      label: 'New canvas',
       icon: 'grid_on',
-      trailing: <kbd aria-hidden="true" className={styles.keyboardShortcut}>C</kbd>
+      trailing: (
+        <kbd aria-hidden="true" className={styles.keyboardShortcut}>
+          C
+        </kbd>
+      )
     },
-    { 
-      label: 'New folder', 
+    {
+      label: 'New folder',
       icon: 'folder',
-      trailing: <kbd aria-hidden="true" className={styles.keyboardShortcut}>&#8679;N</kbd> 
+      trailing: (
+        <kbd aria-hidden="true" className={styles.keyboardShortcut}>
+          &#8679;N
+        </kbd>
+      )
     }
   ];
 
@@ -29,6 +41,8 @@ export const Sidebar = () => {
       <div>
         <div className={styles.header}>
           <Image src="/logo.svg" alt="Logo" className={styles.logo} width={425} height={97} />
+
+          {/* TODO: Populate using list of vaults from storage */}
           <select name="vault-picker" id="vault-picker">
             <option value="new-vault">New vault</option>
           </select>

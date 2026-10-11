@@ -57,16 +57,16 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * Primary button with a icon:
  * ```tsx
  * <Button
- *  startIcon="settings" 
+ *  startIcon="settings"
  *  aria-label="Settings"
  *  className={styles.newVault}
  * />
  * ```
- * 
+ *
  * @example
- * 
+ *
  * ```tsx
- * <Button 
+ * <Button
  *  startIcon="search"
  *  className={styles.search}
  * >

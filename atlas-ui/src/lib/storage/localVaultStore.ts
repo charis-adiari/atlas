@@ -1,4 +1,4 @@
-import type { Vault, VaultStore } from "./types";
+import type { Vault, VaultStore } from './types';
 
 interface LocalMeta {
   vaultIds: Set<string>;
@@ -6,7 +6,7 @@ interface LocalMeta {
   lastLogIn: string;
 }
 
-const META_KEY = "atlas:meta";
+const META_KEY = 'atlas:meta';
 const vaultKey = (vaultId: string) => `atlas:vaults:${vaultId}`;
 const fileKey = (fileId: string) => `atlas:file:${fileId}`;
 
@@ -21,8 +21,7 @@ export class LocalVaultStore implements VaultStore {
   async setLastLogIn(dateTime: string) {
     let meta = this.readJson<Partial<LocalMeta>>(META_KEY);
 
-    if (meta)
-      meta.lastLogIn = dateTime;
+    if (meta) meta.lastLogIn = dateTime;
     else {
       meta = {
         vaultIds: new Set(),
@@ -34,15 +33,15 @@ export class LocalVaultStore implements VaultStore {
     localStorage.setItem(META_KEY, JSON.stringify(meta));
   }
 
-  async createVault(name = "New Vault") {
+  async createVault(name = 'New Vault') {
     const vault: Vault = {
       id: crypto.randomUUID(),
       name,
-      createdAt: Date.now().toString(),
+      createdAt: Date.now().toString()
     };
     localStorage.setItem(vaultKey(vault.id), JSON.stringify(vault));
     this.openVault(vault.id);
-    
+
     return vault;
   }
 
@@ -63,8 +62,7 @@ export class LocalVaultStore implements VaultStore {
     if (meta) {
       meta.vaultIds?.add(vaultId);
       meta.lastOpenVaultId = vaultId;
-    }
-    else {
+    } else {
       meta = {
         vaultIds: new Set(vaultId),
         lastOpenVaultId: vaultId,

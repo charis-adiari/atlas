@@ -1,9 +1,9 @@
 'use client';
 
-import { Workspace } from "@/components/Workspace";
-import { getStore } from "@/lib/storage";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Workspace } from '@/components/Workspace';
+import { getStore } from '@/lib/storage';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 export default function Home() {
   const router = useRouter();

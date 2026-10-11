@@ -8,21 +8,27 @@ export type Vault = {
 export type Tree = {
   rootFolderIds: string[];
   rootFileIds: string[];
-  folders: Record<string, {
-    id: string; 
-    name: string; 
-    parentFolderId: string | null;
-    childFolderIds: string[]; 
-    childFileIds: string[];
-  }>;
-  files: Record<string, {
-    id: string; 
-    name: string; 
-    type: "note" | "canvas";
-    folderId: string | null; 
-    createdAt: string;
-    updatedAt: string;
-  }>;
+  folders: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      parentFolderId: string | null;
+      childFolderIds: string[];
+      childFileIds: string[];
+    }
+  >;
+  files: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      type: 'note' | 'canvas';
+      folderId: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }
+  >;
 };
 
 export interface VaultStore {
