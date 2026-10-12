@@ -11,6 +11,13 @@ smallrye:
       key:
         location: privateKey.pem
 
+mp:
+  jwt:
+    verify:
+      publickey:
+        location: publicKey.pem
+      issuer: ${app.auth.issuer}
+
 quarkus:
   http:
     port: 8080
@@ -31,6 +38,10 @@ quarkus:
   smallrye-openapi:
     info-title: Atlas
     info-version: 1.0.0
+    security-scheme: jwt
+  hibernate-orm:
+    jdbc:
+      statement-batch-size: 100
   datasource:
     db-kind: postgresql
   console:
@@ -63,6 +74,16 @@ quarkus:
   app:
     auth:
       bcrypt-cost: 4
+  smallrye:
+    jwt:
+      sign:
+        key:
+          location: testPrivateKey.pem
+  mp:
+    jwt:
+      verify:
+        publickey:
+          location: testPublicKey.pem
 
 "%prod":
   quarkus:

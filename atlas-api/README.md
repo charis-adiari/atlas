@@ -19,15 +19,18 @@ This project uses Java Quarkus.
 
 1. Fill in the actual values in `.env`. For the database password, any value will do for local dev.
 1. If you add a new environment variable, add its key (with a placeholder or blank value) to `.env.example` so others know it's needed.
-1. Create a signing key for the access tokens issued at signup. It is git-ignored, so every developer makes their own.
-   Run this from the API project root in Git Bash (Git for Windows ships `openssl`):
+1. Create a key pair for the access tokens: the private key signs the token issued at signup and the public key
+   verifies it on protected endpoints. Both are git-ignored, so every developer makes their own. Run this from the API
+   project root in Git Bash (Git for Windows ships `openssl`):
 
    ```bash
    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out src/main/resources/privateKey.pem
+   openssl rsa -in src/main/resources/privateKey.pem -pubout -out src/main/resources/publicKey.pem
    ```
 
-   In production, set `SMALLRYE_JWT_SIGN_KEY_LOCATION=file:/path/to/privateKey.pem` instead. The `.pem` in
-   `src/test/resources` is a throw-away key for tests only.
+   In production, set `SMALLRYE_JWT_SIGN_KEY_LOCATION=file:/path/to/privateKey.pem` and
+   `MP_JWT_VERIFY_PUBLICKEY_LOCATION=file:/path/to/publicKey.pem` instead. Tests use their own throw-away pair,
+   `testPrivateKey.pem` and `testPublicKey.pem` in `src/test/resources`.
 
 ## Database Setup
 

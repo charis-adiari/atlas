@@ -10,6 +10,7 @@ import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -54,6 +55,9 @@ public class AuthServiceTests {
     @InjectMocks
     AuthService service;
 
+    @Captor
+    ArgumentCaptor<User> saved;
+
     @Test
     void signup_ReturnsUserAndAccessToken() {
         // Arrange
@@ -77,7 +81,6 @@ public class AuthServiceTests {
     void signup_StoresTheHashAndNeverThePassword() {
         // Arrange
         when(hasher.hash(PASSWORD)).thenReturn(HASH);
-        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
 
         // Act
         service.signup(EMAIL, PASSWORD);
