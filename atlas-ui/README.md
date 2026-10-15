@@ -20,6 +20,31 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Configuration
+
+The UI calls the API under `/api/v1`. In development the Next.js dev server proxies those requests to the API, so the browser stays on one origin and CORS does not come into play. Both settings are optional:
+
+- `API_PROXY_TARGET` (default `http://localhost:8080`): where `/api/v1/*` is proxied to. Read server-side by `next.config.ts`.
+- `NEXT_PUBLIC_API_BASE_URL` (default `/api/v1`): the base URL the browser calls. Set it to the API's full URL to skip the proxy; the API's CORS origin must then allow the UI.
+
+## Local vault data and migration
+
+After a successful signup the UI looks for vault data kept on the device. If there is some, it asks whether to migrate it. Nothing about local vaults is stored yet, so whatever persists them must use this contract:
+
+- Key `atlas.local-vault-data` in `localStorage`, holding JSON with four flat lists: `vaults`, `folders`, `files` and `backlinks`. The fields are those of the API's migration payload (`src/types/migration.ts`). Ids are UUIDs, and timestamps are ISO-8601 strings (epoch milliseconds are converted).
+- Only the fields the API knows are uploaded; anything else stored alongside them is ignored.
+- The upload is one all-or-nothing request to `POST /api/v1/vaults/migrate`. It is tried up to 3 times, pausing 1s and then 2s, when the server cannot be reached or has a problem. After that the user can retry or continue without migrating.
+- Local data is never deleted. Once the API confirms the upload, the migrated vault ids are recorded under `atlas.local-vault-data.migrated`, so those vaults are not offered again. Vaults created later are still offered.
+
+## Testing
+
+```bash
+npm test
+npm run test:coverage
+```
+
+The acceptance criteria of US-02 (signup, migration prompt, confirm, decline, failed signup, network failure during migration) are tested end to end in `src/components/account/AuthEntry.acceptance.test.tsx`. They run the real UI against an in-memory fake of the API (`src/test/FakeAtlasApi.ts`) that follows the API's rules and can simulate a failing network.
+
 ## Code Style Guide
 
 This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.

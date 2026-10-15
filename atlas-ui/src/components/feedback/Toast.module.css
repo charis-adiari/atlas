@@ -1,0 +1,63 @@
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: min(460px, calc(100vw - 32px));
+  padding: 16px 18px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-raised);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
+}
+
+.marker {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--success);
+  color: var(--background);
+}
+
+.text {
+  flex: 1;
+}
+
+.title {
+  font-weight: 700;
+}
+
+.message {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.dismiss {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--foreground);
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--focus-ring);
+}

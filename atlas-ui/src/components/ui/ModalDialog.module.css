@@ -1,0 +1,35 @@
+.dialog {
+  width: min(456px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 55%);
+}
+
+.dialog:focus-visible {
+  outline: none;
+}
+
+.wide {
+  width: min(498px, calc(100vw - 32px));
+}
+
+.dialog::backdrop {
+  background: rgb(3 5 10 / 72%);
+}
+
+.card {
+  position: relative;
+  padding: 34px;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 24px 20px;
+  }
+}
