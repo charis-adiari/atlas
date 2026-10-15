@@ -1,5 +1,22 @@
 app:
   log-format: "%d{HH:mm:ss,SSS} %-5p [%c{1.}] %X{correlationId} %s%e%n"
+  auth:
+    issuer: atlas
+    token-ttl: PT1H
+    bcrypt-cost: 12
+
+smallrye:
+  jwt:
+    sign:
+      key:
+        location: privateKey.pem
+
+mp:
+  jwt:
+    verify:
+      publickey:
+        location: publicKey.pem
+      issuer: ${app.auth.issuer}
 
 quarkus:
   http:
@@ -21,6 +38,10 @@ quarkus:
   smallrye-openapi:
     info-title: Atlas
     info-version: 1.0.0
+    security-scheme: jwt
+  hibernate-orm:
+    jdbc:
+      statement-batch-size: 100
   datasource:
     db-kind: postgresql
   console:
@@ -48,6 +69,21 @@ quarkus:
         format-sql: true
     console:
       color: true
+
+"%test":
+  app:
+    auth:
+      bcrypt-cost: 4
+  smallrye:
+    jwt:
+      sign:
+        key:
+          location: testPrivateKey.pem
+  mp:
+    jwt:
+      verify:
+        publickey:
+          location: testPublicKey.pem
 
 "%prod":
   quarkus:
