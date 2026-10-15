@@ -1,9 +1,9 @@
 import type { Vault, VaultStore } from './types';
 
 interface LocalMeta {
-  vaultIds: Set<string>;
+  vaultIds: string[];
   lastOpenVaultId: string | null;
-  lastLogIn: string;
+  lastVisit: string;
 }
 
 const META_KEY = 'atlas:meta';
@@ -14,19 +14,19 @@ export class LocalVaultStore implements VaultStore {
   async getLastLogIn() {
     const meta = this.readJson<Partial<LocalMeta>>(META_KEY);
 
-    if (meta) return meta.lastLogIn ?? null;
+    if (meta) return meta.lastVisit ?? null;
     else return null;
   }
 
   async setLastLogIn(dateTime: string) {
     let meta = this.readJson<Partial<LocalMeta>>(META_KEY);
 
-    if (meta) meta.lastLogIn = dateTime;
+    if (meta) meta.lastVisit = dateTime;
     else {
       meta = {
-        vaultIds: new Set(),
+        vaultIds: [],
         lastOpenVaultId: null,
-        lastLogIn: dateTime
+        lastVisit: dateTime
       };
     }
 
@@ -45,6 +45,25 @@ export class LocalVaultStore implements VaultStore {
     return vault;
   }
 
+  async getVaults(): Promise<Vault[]> {
+    let vaults: Vault[] = [];
+    const meta = this.readJson<Partial<LocalMeta>>(META_KEY);
+
+    if (meta && meta.vaultIds?.length) {
+      meta.vaultIds?.forEach(id => {
+        const vault = this.readJson<Partial<Vault>>(vaultKey(id));
+
+        if (vault) vaults.push({
+          id: vault.id ?? id,
+          name: vault.name ?? '',
+          createdAt: vault.createdAt ?? Date.now().toString()
+        });
+      });
+    }
+
+    return vaults;
+  }
+
   private readJson<T>(key: string): T | null {
     const raw = localStorage.getItem(key);
     if (raw === null) return null;
@@ -60,15 +79,25 @@ export class LocalVaultStore implements VaultStore {
     let meta = this.readJson<Partial<LocalMeta>>(META_KEY);
 
     if (meta) {
-      meta.vaultIds?.add(vaultId);
+      if (meta.vaultIds?.includes(vaultId)) meta.vaultIds?.push(vaultId);
       meta.lastOpenVaultId = vaultId;
     } else {
       meta = {
-        vaultIds: new Set(vaultId),
+        vaultIds: [vaultId],
         lastOpenVaultId: vaultId,
-        lastLogIn: Date.now().toString()
+        lastVisit: Date.now().toString()
       };
     }
+
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+  }
+
+  private async initMeta(lastOpenVaultId: string | null) {
+    const meta: LocalMeta = { 
+      vaultIds: lastOpenVaultId ? [lastOpenVaultId] : [],
+      lastOpenVaultId,
+      lastVisit: Date.now().toString(),
+    };
 
     localStorage.setItem(META_KEY, JSON.stringify(meta));
   }

@@ -15,7 +15,7 @@ export default function Home() {
     if (ran.current) return;
     ran.current = true;
 
-    async function decide() {
+    const redirect = async () => {
       const store = getStore();
       const lastLogIn = await store.getLastLogIn();
 
@@ -27,9 +27,9 @@ export default function Home() {
       }
 
       setShowEmpty(true);
-    }
+    };
 
-    decide();
+    redirect();
   }, [router]);
 
   return showEmpty ? <Workspace /> : null;

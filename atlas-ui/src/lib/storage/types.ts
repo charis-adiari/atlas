@@ -35,4 +35,5 @@ export interface VaultStore {
   getLastLogIn(): Promise<string | null>;
   setLastLogIn(dateTime: string): Promise<void>;
   createVault(name?: string): Promise<Vault>;
+  getVaults(): Promise<Vault[]>;
 }
