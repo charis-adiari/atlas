@@ -7,6 +7,7 @@ const defaultTab: TabProps = {
   isActive: true
 };
 
+/** Horizontal strip of {@link Tab}s with a button for adding a new one */
 export const TabBar = ( { tabs }: {tabs?: TabProps[]}) => {
   const tabsToRender = tabs?.length ? tabs : [defaultTab];
 

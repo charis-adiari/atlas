@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import styles from './Sidebar.module.css';
 
+/** Left navigation of the app shell */
 export const Sidebar = () => {
   const pathname = usePathname();
   const [vaults, setVaults] = useState<Vault[]>([]);

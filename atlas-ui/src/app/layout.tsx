@@ -27,10 +27,10 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="en" className={`${manrope.variable} ${dmMono}`}>
       <body className={styles.body}>
         <Sidebar />
-        <main className={styles.main}>
+        <div className={styles.content}>
           <Header />
-          <div className={styles.content}>{children}</div>
-        </main>
+          <main className={styles.main}>{children}</main>
+        </div>
       </body>
     </html>
   );

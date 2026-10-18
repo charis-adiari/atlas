@@ -6,10 +6,18 @@ import styles from './Button.module.css';
  *
  * - `default`: no background or border
  * - `primary`: filled with the primary color
- * - `outline`: bordered, with a light background
+ * - `outline`: bordered, with the parent's background
  * - `primary-large` / `outline-large`: larger versions of the above
  */
-export type ButtonVariant = 'default' | 'primary' | 'outline' | 'primary-large' | 'outline-large';
+export type ButtonVariant = 'default' | 'primary' | 'outline';
+
+/**
+ * Size of a {@link Button}.
+ *
+ * - `default`: compact padding, for toolbars and menus
+ * - `large`: roomier padding, for prominent calls to action
+ */
+export type ButtonSize = 'default' | 'large';
 
 /**
  * Props for the {@link Button} component.
@@ -25,11 +33,18 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
 
   /**
+   * Padding size of the button. Independent of `variant`, so any variant can
+   * be combined with any size.
+   * @defaultValue `"default"`
+   */
+  size?: ButtonSize;
+
+  /**
    * Color of the icons. Exposed as the `data-icon-color` attribute so the
    * stylesheet can target it.
    * @defaultValue `"default"`
    */
-  iconColour?: 'default' | 'accent';
+  iconColour?: 'default' | 'secondary';
 
   /**
    * Material Symbols icon name (for example `"add"`) shown before the text.
@@ -39,43 +54,45 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * A button with an optional icon at the start, the end, or both.
+ * A button with an optional icon before optional text.
  *
  * @remarks
- * Icons are rendered as Material Symbols ligatures and are hidden from
+ * The icon is rendered as a Material Symbols ligature and is hidden from
  * assistive technology (`aria-hidden`), so the accessible name comes from
  * text in `children` or an explicit `aria-label`.
  *
  * Use `className` for layout concerns that only the parent knows about
- * (margin, width, alignment). Use `variant` and `iconColor` for the button's
- * own appearance.
+ * (margin, width, alignment). Use `variant`, `size` and `iconColour` for the
+ * button's own appearance.
  *
  * The `type` attribute defaults to `"button"` so the component never submits
  * a form by accident. Pass `type="submit"` when you want that.
  *
  * @example
- * Primary button with a icon:
+ * Icon-only button. It has no text, so it needs an `aria-label`:
  * ```tsx
- * <Button
- *  startIcon="settings"
- *  aria-label="Settings"
- *  className={styles.newVault}
- * />
+ * <Button startIcon="settings" aria-label="Settings" />
  * ```
  *
  * @example
- *
+ * Large primary button with an icon:
  * ```tsx
- * <Button
- *  startIcon="search"
- *  className={styles.search}
- * >
- *  Search <kbd aria-hidden="true">⌘K</kbd>
+ * <Button variant="primary" size="large" startIcon="notes">
+ *   New note
+ * </Button>
+ * ```
+ *
+ * @example
+ * Extra content next to the label:
+ * ```tsx
+ * <Button startIcon="search" className={styles.search}>
+ *   Search <kbd aria-hidden="true">⌘K</kbd>
  * </Button>
  * ```
  */
 export const Button = ({
   variant = 'default',
+  size = 'default',
   iconColour = 'default',
   startIcon,
   type = 'button',
@@ -90,6 +107,7 @@ export const Button = ({
       type={type}
       className={className ? `${styles.btn} ${className}` : styles.btn}
       data-variant={variant}
+      data-size={size}
       data-icon-colour={iconColour}
       {...rest}
     >

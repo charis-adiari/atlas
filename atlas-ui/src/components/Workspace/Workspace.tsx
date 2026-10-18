@@ -1,14 +1,15 @@
+import { Button } from '@/components/Button/Button';
 import Image from 'next/image';
-import { Button } from '../Button/Button';
 import { TabBar } from './TabBar/TabBar';
 import styles from './Workspace.module.css';
 
+/** Main content area */
 export const Workspace = ({ vaultId }: { vaultId?: string }) => {
   return (
-    <>
+    <div className={styles.workspace}>
       <TabBar />
 
-      <div className={styles.workspace}>
+      <div className={styles.content}>
         <div className={styles.empty}>
           <Image
             src="/empty-state.png"
@@ -22,11 +23,11 @@ export const Workspace = ({ vaultId }: { vaultId?: string }) => {
             Create your first note or canvas to start organising your ideas
           </span>
           <div className={styles.buttonRow}>
-            <Button variant='primary-large' startIcon='notes' children='New Note' />
-            <Button variant='outline-large' startIcon='grid_on' iconColour='accent' children='New Canvas' />
+            <Button variant='primary' size='large' startIcon='notes'>New Note</Button>
+            <Button variant='outline' size='large' startIcon='grid_on' iconColour='secondary'>New Canvas</Button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };

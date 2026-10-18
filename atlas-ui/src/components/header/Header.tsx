@@ -1,6 +1,7 @@
-import { Button } from '../Button/Button';
+import { Button } from '@/components/Button/Button';
 import styles from './Header.module.css';
 
+/** Top bar of the app shell */
 export const Header = () => {
   return (
     <header className={styles.header}>
@@ -23,7 +24,7 @@ export const Header = () => {
           <span className={styles.statusIcon}></span>
           <span>All changes saved</span>
         </div>
-        <Button variant='primary' children="Log in" />
+        <Button variant='primary'>Log in</Button>
       </div>
     </header>
   );

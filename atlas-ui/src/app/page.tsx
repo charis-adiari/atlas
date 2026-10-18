@@ -11,7 +11,6 @@ export default function Home() {
   const ran = useRef(false);
 
   useEffect(() => {
-    // prevents this code from running 2ce (which react does by default for some reason) and creating 2 vaults
     if (ran.current) return;
     ran.current = true;
 
@@ -21,7 +20,8 @@ export default function Home() {
 
       if (!lastLogIn) {
         const vault = await store.createVault();
-        await store.setLastLogIn(Date.now().toString());
+        const now = new Date(Date.now());
+        await store.setLastLogIn(now.toISOString());
         router.replace(`/vault/${vault.id}`);
         return;
       }

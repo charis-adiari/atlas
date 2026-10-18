@@ -114,6 +114,7 @@ export const ButtonDropdown = ({
         id={menuId}
         popover="auto"
         className={styles.menu}
+        role='menu'
         style={{ positionAnchor: anchorName } as React.CSSProperties}
       >
         {items.map((item) => (
