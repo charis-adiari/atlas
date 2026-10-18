@@ -11,7 +11,7 @@ const vaultKey = (vaultId: string) => `atlas:vaults:${vaultId}`;
 const fileKey = (fileId: string) => `atlas:file:${fileId}`;
 
 export class LocalVaultStore implements VaultStore {
-  async getLastLogIn() {
+  async getLastVisit() {
     const meta = this.readJson<Partial<LocalMeta>>(META_KEY);
 
     if (meta) return meta.lastVisit ?? null;
@@ -88,16 +88,6 @@ export class LocalVaultStore implements VaultStore {
         lastVisit: Date.now().toString()
       };
     }
-
-    localStorage.setItem(META_KEY, JSON.stringify(meta));
-  }
-
-  private async initMeta(lastOpenVaultId: string | null) {
-    const meta: LocalMeta = { 
-      vaultIds: lastOpenVaultId ? [lastOpenVaultId] : [],
-      lastOpenVaultId,
-      lastVisit: Date.now().toString(),
-    };
 
     localStorage.setItem(META_KEY, JSON.stringify(meta));
   }

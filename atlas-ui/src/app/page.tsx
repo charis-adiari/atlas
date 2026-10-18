@@ -17,7 +17,7 @@ export default function Home() {
 
     const redirect = async () => {
       const store = getStore();
-      const lastLogIn = await store.getLastLogIn();
+      const lastLogIn = await store.getLastVisit();
 
       if (!lastLogIn) {
         const vault = await store.createVault();

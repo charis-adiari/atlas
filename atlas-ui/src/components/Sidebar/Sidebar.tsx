@@ -55,7 +55,7 @@ export const Sidebar = () => {
     };
     loadVaults();
     return () => {
-      cancelled = true; // ignore stale results if the path changes quickly
+      cancelled = true;
     };
   }, [pathname]);
 
