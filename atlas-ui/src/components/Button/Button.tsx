@@ -98,7 +98,7 @@ export const Button = ({
           {startIcon}
         </span>
       )}
-      {children}
+      {children && (<span>{children}</span>)}
     </button>
   );
 };

@@ -1,0 +1,51 @@
+.header {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+}
+
+.headerStart {
+  flex: 0 1 32rem;
+  min-width: 0;
+
+  .search {
+    width: 100%;
+
+    input {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+}
+
+.headerEnd {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 1.375rem;
+
+  .undoRedo {
+    display: flex;
+    gap: 0.625rem;
+  }
+
+  .headerBtn,
+  .settingsBtn {
+    padding: 0;
+  }
+
+  .statusIndicator {
+    font-size: 0.6875rem;
+
+    .statusIcon {
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+      height: 0.5rem;
+      margin-right: 0.5rem;
+      width: 0.5rem;
+    }
+  }
+}

@@ -6,6 +6,7 @@
   --background-light-4: hsl(226, 27%, 19%);
 
   --text: hsl(0, 0%, 100%);
+  --text-muted: hsl(225, 17%, 73%);
 
   --primary: hsl(259, 97%, 63%);
   --secondary: hsl(43, 87%, 64%);
@@ -49,4 +50,8 @@ textarea {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.material-symbols-rounded {
+  font-size: 1.15rem;
 }

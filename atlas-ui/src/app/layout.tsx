@@ -1,10 +1,11 @@
-import { Header } from '@/components/Header';
+import { Header } from '@/components/header/Header';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import 'material-symbols/rounded.css';
 import type { Metadata } from 'next';
 import { DM_Mono, Manrope } from 'next/font/google';
 import './globals.css';
 import './styles/inputs.css';
+import styles from './layout.module.css';
 
 const manrope = Manrope({
   variable: '--font-manrope',
@@ -24,9 +25,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={`${manrope.variable} ${dmMono}`}>
-      <body>
+      <body className={styles.body}>
         <Sidebar />
-        <main>
+        <main className={styles.main}>
           <Header />
           <div className="workspace">{children}</div>
         </main>

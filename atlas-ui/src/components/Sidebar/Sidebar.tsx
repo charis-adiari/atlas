@@ -2,12 +2,12 @@
 
 import { Button } from '@/components/Button/Button';
 import { ButtonDropdown } from '@/components/ButtonDropdown/ButtonDropdown';
-import Image from 'next/image';
-import styles from './Sidebar.module.css';
 import { getStore } from '@/lib/storage';
-import { useEffect, useState } from 'react';
 import { Vault } from '@/lib/storage/types';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import styles from './Sidebar.module.css';
 
 export const Sidebar = () => {
   const pathname = usePathname();
@@ -45,12 +45,7 @@ export const Sidebar = () => {
 
   const store = getStore();
 
-  // useEffect(() => {
-  //   const loadVaults = async () => setVaults(await store.getVaults());
-  //   loadVaults();
-  // }, []); // empty array = run once on mount
-
-  // TODO: #{ticket no} Replace with shared vault state
+  // TODO: #24 Replace with shared vault state
   useEffect(() => {
     let cancelled = false;
     const loadVaults = async () => {
@@ -78,7 +73,6 @@ export const Sidebar = () => {
         <div className={styles.header}>
           <Image src="/logo.svg" alt="Logo" className={styles.logo} width={425} height={97} />
 
-          {/* TODO: Populate using list of vaults from storage */}
           <select name="vault-picker" id="vault-picker">
             {vaultOptions}
           </select>
