@@ -1,4 +1,4 @@
-import { Workspace } from '@/components/Workspace';
+import { Workspace } from '@/components/Workspace/Workspace';
 
 export default async function VaultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

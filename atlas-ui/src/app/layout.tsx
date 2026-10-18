@@ -1,4 +1,4 @@
-import { Header } from '@/components/header/Header';
+import { Header } from '@/components/Header/Header';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import 'material-symbols/rounded.css';
 import type { Metadata } from 'next';

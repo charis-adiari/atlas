@@ -1,0 +1,14 @@
+.tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.265rem 1rem;
+
+  &.active {
+    border-bottom: 2px solid var(--primary);
+  }
+  
+  .text {
+    margin-left: 0.5rem;
+    margin-right: 0.75rem;
+  }
+}

@@ -1,0 +1,10 @@
+.tabBar  {
+  align-items: center;
+  display: flex;
+  width: 100%;
+
+  .add {
+    margin-left: 0.625rem;
+    padding: 0;
+  }
+}

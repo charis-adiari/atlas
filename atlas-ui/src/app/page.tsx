@@ -1,6 +1,6 @@
 'use client';
 
-import { Workspace } from '@/components/Workspace';
+import { Workspace } from '@/components/Workspace/Workspace';
 import { getStore } from '@/lib/storage';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
