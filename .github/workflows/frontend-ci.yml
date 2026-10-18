@@ -20,14 +20,14 @@ on:
 
 env:
   NODE_VERSION: '22'
+  
+defaults:
+  run:
+    working-directory: atlas-ui
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: atlas-ui
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
