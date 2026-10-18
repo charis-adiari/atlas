@@ -11,6 +11,8 @@
   --primary: hsl(259, 97%, 63%);
   --secondary: hsl(43, 87%, 64%);
   --accent: hsl(143, 71%, 58%);
+
+  --workspace-x-padding: 1rem;
 }
 
 html {

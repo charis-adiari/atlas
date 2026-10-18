@@ -1,6 +1,8 @@
 .header {
   align-items: center;
+  border-bottom: 1px solid var(--background-light-3);
   display: flex;
+  flex: 0 0 auto;
   height: 3.75rem;
   gap: 1rem;
   justify-content: space-between;

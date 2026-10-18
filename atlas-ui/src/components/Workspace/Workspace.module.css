@@ -1,3 +1,36 @@
 .workspace {
-  padding: 0 1rem;
+  height: 100%;
+  padding: 0 var(--workspace-x-padding);
+  width: 100%;
+}
+
+.empty {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  height: 100%;
+  justify-content: center;
+  margin: auto;
+
+  .emptyImage {
+    height: auto;
+    width: 14rem;
+  }
+
+  .emptyText {
+    text-align: center;
+
+    .emptyHeading {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .buttonRow {
+    display: flex;
+    gap: 0.75rem;
+  }
 }

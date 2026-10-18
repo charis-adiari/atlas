@@ -29,7 +29,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * stylesheet can target it.
    * @defaultValue `"default"`
    */
-  iconColor?: 'default' | 'accent';
+  iconColour?: 'default' | 'accent';
 
   /**
    * Material Symbols icon name (for example `"add"`) shown before the text.
@@ -76,7 +76,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  */
 export const Button = ({
   variant = 'default',
-  iconColor = 'default',
+  iconColour = 'default',
   startIcon,
   type = 'button',
   className,
@@ -90,7 +90,7 @@ export const Button = ({
       type={type}
       className={className ? `${styles.btn} ${className}` : styles.btn}
       data-variant={variant}
-      data-icon-color={iconColor}
+      data-icon-colour={iconColour}
       {...rest}
     >
       {startIcon && (

@@ -29,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
         <Sidebar />
         <main className={styles.main}>
           <Header />
-          <div className="workspace">{children}</div>
+          <div className={styles.content}>{children}</div>
         </main>
       </body>
     </html>
