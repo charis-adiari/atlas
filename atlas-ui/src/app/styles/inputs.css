@@ -10,7 +10,7 @@ input {
   outline: none;
   padding: 0.375rem 1rem;
   font-size: 1rem;
-  
+
   &::placeholder {
     color: var(--text-muted);
     opacity: 1;
@@ -21,14 +21,14 @@ input {
   width: fit-content;
   position: relative;
 
-  >span.material-symbols-rounded {
+  > span.material-symbols-rounded {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     left: 0.75rem;
   }
 
-  >.material-symbols-rounded:first-child+input {
+  > .material-symbols-rounded:first-child + input {
     padding-left: 2.5rem;
   }
 }

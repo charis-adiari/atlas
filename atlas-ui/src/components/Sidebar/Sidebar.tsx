@@ -58,7 +58,7 @@ export const Sidebar = () => {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [pathname, store]);
 
   const vaultOptions = vaults
     .filter((vault) => vault.name !== '')

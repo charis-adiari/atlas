@@ -4,7 +4,7 @@ import { TabBar } from './TabBar/TabBar';
 import styles from './Workspace.module.css';
 
 /** Main content area */
-export const Workspace = ({ vaultId }: { vaultId?: string }) => {
+export const Workspace = () => {
   return (
     <div className={styles.workspace}>
       <TabBar />
@@ -23,8 +23,12 @@ export const Workspace = ({ vaultId }: { vaultId?: string }) => {
             Create your first note or canvas to start organising your ideas
           </span>
           <div className={styles.buttonRow}>
-            <Button variant='primary' size='large' startIcon='notes'>New Note</Button>
-            <Button variant='outline' size='large' startIcon='grid_on' iconColour='secondary'>New Canvas</Button>
+            <Button variant="primary" size="large" startIcon="notes">
+              New Note
+            </Button>
+            <Button variant="outline" size="large" startIcon="grid_on" iconColour="secondary">
+              New Canvas
+            </Button>
           </div>
         </div>
       </div>

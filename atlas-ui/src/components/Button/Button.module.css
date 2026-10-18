@@ -19,11 +19,11 @@
   &[data-variant='primary'] {
     background: var(--primary);
   }
-  
+
   &[data-size='large'] {
     padding: 0.625rem 1.25rem;
   }
-  
+
   &[data-icon-colour='secondary'] .icon {
     color: var(--secondary);
   }

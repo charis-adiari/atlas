@@ -6,7 +6,7 @@ export const Header = () => {
   return (
     <header className={styles.header}>
       <div className={styles.headerStart}>
-        <div className={"input-container " + styles.search}>
+        <div className={'input-container ' + styles.search}>
           <span className="material-symbols-rounded">search</span>
           <input type="text" placeholder="Search this vault..." />
         </div>
@@ -24,7 +24,7 @@ export const Header = () => {
           <span className={styles.statusIcon}></span>
           <span>All changes saved</span>
         </div>
-        <Button variant='primary'>Log in</Button>
+        <Button variant="primary">Log in</Button>
       </div>
     </header>
   );

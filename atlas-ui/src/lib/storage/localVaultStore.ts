@@ -16,8 +16,6 @@ interface LocalMeta {
 const META_KEY = 'atlas:meta';
 /** Builds the `localStorage` key for a vault. */
 const vaultKey = (vaultId: string) => `atlas:vaults:${vaultId}`;
-/** Builds the `localStorage` key for a file. */
-const fileKey = (fileId: string) => `atlas:file:${fileId}`;
 
 /**
  * {@link VaultStore} backed by the browser's `localStorage`.
@@ -62,18 +60,19 @@ export class LocalVaultStore implements VaultStore {
   }
 
   async getVaults(): Promise<Vault[]> {
-    let vaults: Vault[] = [];
+    const vaults: Vault[] = [];
     const meta = this.readJson<Partial<LocalMeta>>(META_KEY);
 
     if (meta && meta.vaultIds?.length) {
-      meta.vaultIds?.forEach(id => {
+      meta.vaultIds?.forEach((id) => {
         const vault = this.readJson<Partial<Vault>>(vaultKey(id));
 
-        if (vault) vaults.push({
-          id: vault.id ?? id,
-          name: vault.name ?? '',
-          createdAt: vault.createdAt ?? new Date(Date.now()).toISOString()
-        });
+        if (vault)
+          vaults.push({
+            id: vault.id ?? id,
+            name: vault.name ?? '',
+            createdAt: vault.createdAt ?? new Date(Date.now()).toISOString()
+          });
       });
     }
 
