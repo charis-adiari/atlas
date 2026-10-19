@@ -105,7 +105,7 @@ export const Button = ({
   return (
     <button
       type={type}
-      className={className ? `${styles.btn} ${className}` : styles.btn}
+      className={className ? `${styles.button} ${className}` : styles.button}
       data-variant={variant}
       data-size={size}
       data-icon-colour={iconColour}

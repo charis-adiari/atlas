@@ -14,11 +14,11 @@ export const Header = () => {
 
       <div className={styles.headerEnd}>
         <div className={styles.undoRedo}>
-          <Button startIcon="undo" className={styles.headerBtn} aria-label="Undo" />
-          <Button startIcon="redo" className={styles.headerBtn} aria-label="Redo" />
+          <Button startIcon="undo" className={styles.headerButton} aria-label="Undo" />
+          <Button startIcon="redo" className={styles.headerButton} aria-label="Redo" />
         </div>
 
-        <Button startIcon="settings" className={styles.settingsBtn} aria-label="Settings" />
+        <Button startIcon="settings" className={styles.settingsButton} aria-label="Settings" />
 
         <div className={styles.statusIndicator}>
           <span className={styles.statusIcon}></span>

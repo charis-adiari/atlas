@@ -94,15 +94,15 @@ export const Sidebar = () => {
 
       <div className={styles.footer}>
         <div>
-          <Button startIcon="upload" className={styles.btnFullWidth}>
+          <Button startIcon="upload" className={styles.buttonFullWidth}>
             Import
           </Button>
-          <Button startIcon="share_windows" className={styles.btnFullWidth}>
+          <Button startIcon="share_windows" className={styles.buttonFullWidth}>
             Export vault
           </Button>
         </div>
 
-        <Button startIcon="settings" className={styles.btnFullWidth}>
+        <Button startIcon="settings" className={styles.buttonFullWidth}>
           Settings
         </Button>
       </div>
