@@ -1,0 +1,31 @@
+import { Button } from '@/components/Button/Button';
+import styles from './Header.module.css';
+
+/** Top bar of the app shell */
+export const Header = () => {
+  return (
+    <header className={styles.header}>
+      <div className={styles.headerStart}>
+        <div className={'input-container ' + styles.search}>
+          <span className="material-symbols-rounded">search</span>
+          <input type="text" placeholder="Search this vault..." />
+        </div>
+      </div>
+
+      <div className={styles.headerEnd}>
+        <div className={styles.undoRedo}>
+          <Button startIcon="undo" className={styles.headerButton} aria-label="Undo" />
+          <Button startIcon="redo" className={styles.headerButton} aria-label="Redo" />
+        </div>
+
+        <Button startIcon="settings" className={styles.settingsButton} aria-label="Settings" />
+
+        <div className={styles.statusIndicator}>
+          <span className={styles.statusIcon}></span>
+          <span>All changes saved</span>
+        </div>
+        <Button variant="primary">Log in</Button>
+      </div>
+    </header>
+  );
+};

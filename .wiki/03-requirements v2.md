@@ -36,7 +36,7 @@
 
 | ID | Description | Priority | Source (UC) | Dependencies | Assumptions |
 |---|---|---|---|---|---|
-| FR-015 | Users can add a text element to a canvas via direct double-click, with no intermediate dialog | Must | UC-15 | FR-009 | — |
+| FR-015 | Users can add a text element to a canvas via direct double-click, with no intermediate dialogue | Must | UC-15 | FR-009 | — |
 | FR-016 | Users can add basic shapes to a canvas | Must | UC-16 | FR-009 | — |
 | FR-017 | Users can add sticky note elements to a canvas | Must | UC-17 | FR-009 | — |
 | FR-018 | Users can draw connectors/arrows between points or elements; connectors are purely visual and create no semantic/data relationship | Must | UC-18 | FR-015, FR-016, FR-017 | — |
@@ -61,7 +61,7 @@
 | FR-027 | Users can embed a live, read-only preview of a custom rectangular crop of a canvas, defined at the moment of embedding from within the note | Must | UC-29 | FR-025 | — |
 | FR-028 | Clicking a linked canvas element (single click) navigates to its linked note/block; double-clicking edits the element instead | Must | UC-30 | FR-024 | — |
 | FR-029 | Clicking a note embed navigates to and auto-frames/selects the source canvas content | Must | UC-31 | FR-025–027 | — |
-| FR-030 | Users can remove a link or embed instantly, with no confirmation dialog; underlying content on both sides is preserved; undo/redo is the safety net | Must | UC-32 | FR-024–027, FR-047 | — |
+| FR-030 | Users can remove a link or embed instantly, with no confirmation dialogue; underlying content on both sides is preserved; undo/redo is the safety net | Must | UC-32 | FR-024–027, FR-047 | — |
 | FR-031 | Embedded previews automatically reflect current source content, including when the embedding note was not open at the time of the source edit | Must | UC-33 | FR-021, FR-025–027 | — |
 | FR-032 | When a link/embed target is missing, the system shows a broken-link indicator and lets the user relink to a new target or remove the reference | Must | UC-38 | FR-024–027 | — |
 | FR-033 | The system supports many-to-many cardinality for embeds (any element/Group/Frame/Crop embeddable in multiple notes; a note may embed multiple sources) | Must | UC-23, UC-39, UC-40 | FR-025–027 | — |
@@ -91,7 +91,7 @@
 
 | ID | Description | Priority | Source (UC) | Dependencies | Assumptions |
 |---|---|---|---|---|---|
-| FR-040 | Users can undo/redo their recent actions within the current editing session | Should *(explicitly deprioritized by product owner)* | UC-47 | — | Does not need to persist across sessions/reloads |
+| FR-040 | Users can undo/redo their recent actions within the current editing session | Should *(explicitly de-prioritised by product owner)* | UC-47 | — | Does not need to persist across sessions/reloads |
 
 ---
 
