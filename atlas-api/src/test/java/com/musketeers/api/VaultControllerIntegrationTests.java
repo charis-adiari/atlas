@@ -2,12 +2,13 @@ package com.musketeers.api;
 
 import com.musketeers.api.vaults.VaultController;
 import com.musketeers.domain.User;
+import com.musketeers.domain.vault.FileType;
 import com.musketeers.domain.vault.Folder;
 import com.musketeers.domain.vault.Vault;
 import com.musketeers.domain.vault.VaultFile;
-import com.musketeers.exception.MigrationConflictException;
 import com.musketeers.repository.UserRepository;
 import com.musketeers.service.TokenService;
+import com.musketeers.service.migration.MigrationService;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -34,13 +36,13 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @QuarkusTest
 @TestHTTPEndpoint(VaultController.class)
 public class VaultControllerIntegrationTests {
     private static final String PROBLEM_JSON = "application/problem+json";
     private static final String CREATED_AT = "2025-01-02T03:04:05Z";
-    private static final String UPDATED_AT = "2025-06-07T08:09:10Z";
 
     @Inject
     UserRepository userRepository;
@@ -80,11 +82,9 @@ public class VaultControllerIntegrationTests {
                 "backlinks", List.of(link(note, canvas), link(note, canvas))
         );
 
-        migrate(tokenFor(user), payload).statusCode(201)
-                .body("vaults", is(2))
-                .body("folders", is(3))
-                .body("files", is(3))
-                .body("backlinks", is(1));
+        Instant before = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+
+        migrate(tokenFor(user), payload).statusCode(201).body(emptyOrNullString());
 
         assertEquals(2L, count("vaults", user.id));
         assertEquals(3L, count("folders", user.id));
@@ -95,19 +95,16 @@ public class VaultControllerIntegrationTests {
         assertEquals(root, inTransaction(() -> entityManager.find(Folder.class, child)).parentFolderId);
         VaultFile stored = inTransaction(() -> entityManager.find(VaultFile.class, note));
         assertEquals(Instant.parse(CREATED_AT), stored.createdAt);
-        assertEquals(Instant.parse(UPDATED_AT), stored.lastUpdatedAt);
+        assertFalse(stored.lastUpdatedAt.isBefore(before));
+        assertEquals(FileType.NOTE, stored.type);
         assertEquals("Content of Ideas", stored.content);
     }
 
     @Test
-    void migrate_WhenNothingIsUploaded_Returns201WithZeroCounts() {
+    void migrate_WhenNothingIsUploaded_Returns201() {
         User user = createUser("ada@example.com");
 
-        migrate(tokenFor(user), Map.of()).statusCode(201)
-                .body("vaults", is(0))
-                .body("folders", is(0))
-                .body("files", is(0))
-                .body("backlinks", is(0));
+        migrate(tokenFor(user), Map.of()).statusCode(201).body(emptyOrNullString());
     }
 
     @Test
@@ -118,6 +115,7 @@ public class VaultControllerIntegrationTests {
         Map<String, Object> spoofed = Map.of(
                 "id", vaultId.toString(),
                 "name", "Mine",
+                "createdAt", CREATED_AT,
                 "userId", other.id.toString());
 
         migrate(tokenFor(user), Map.of("userId", other.id.toString(), "vaults", List.of(spoofed)))
@@ -146,6 +144,18 @@ public class VaultControllerIntegrationTests {
                 .body(Map.of())
                 .when().post("migrate")
                 .then().statusCode(401);
+    }
+
+    @Test
+    void migrate_WhenEmailIsNotVerified_Returns403AndStoresNothing() {
+        User user = createUnverifiedUser("ada@example.com");
+
+        migrate(tokenFor(user), Map.of("vaults", List.of(vault(UUID.randomUUID(), "Work"))))
+                .statusCode(403)
+                .contentType(PROBLEM_JSON)
+                .body("detail", equalTo(MigrationService.UNVERIFIED_EMAIL_MESSAGE));
+
+        assertEquals(0L, count("vaults", user.id));
     }
 
     @Test
@@ -197,7 +207,8 @@ public class VaultControllerIntegrationTests {
     void migrate_WhenFieldsAreInvalid_Returns400WithAPositionedErrorPerField() {
         User user = createUser("ada@example.com");
         UUID vaultId = UUID.randomUUID();
-        Map<String, Object> badFile = file(UUID.randomUUID(), vaultId, null, "pdf", " ");
+        Map<String, Object> badFile = file(UUID.randomUUID(), vaultId, null, "note", " ");
+        badFile.remove("createdAt");
         Map<String, Object> payload = Map.of(
                 "vaults", List.of(vault(vaultId, "Work")),
                 "files", List.of(badFile)
@@ -205,8 +216,22 @@ public class VaultControllerIntegrationTests {
 
         migrate(tokenFor(user), payload).statusCode(400)
                 .contentType(PROBLEM_JSON)
-                .body("errors.keySet()", hasItem("files[0].type"))
+                .body("errors.keySet()", hasItem("files[0].createdAt"))
                 .body("errors.keySet()", hasItem("files[0].name"));
+
+        assertEquals(0L, count("vaults", user.id));
+    }
+
+    @Test
+    void migrate_WhenAFileTypeIsUnknown_Returns400AndStoresNothing() {
+        User user = createUser("ada@example.com");
+        UUID vaultId = UUID.randomUUID();
+        Map<String, Object> payload = Map.of(
+                "vaults", List.of(vault(vaultId, "Work")),
+                "files", List.of(file(UUID.randomUUID(), vaultId, null, "pdf", "Report"))
+        );
+
+        migrate(tokenFor(user), payload).statusCode(400);
 
         assertEquals(0L, count("vaults", user.id));
     }
@@ -241,7 +266,7 @@ public class VaultControllerIntegrationTests {
     }
 
     @Test
-    void migrate_WhenAnIdBelongsToAnotherUser_Returns409AndRollsBackEverythingElse() {
+    void migrate_WhenAnIdBelongsToAnotherUser_Returns400AndRollsBackEverythingElse() {
         User first = createUser("ada@example.com");
         User second = createUser("grace@example.com");
         UUID takenFile = UUID.randomUUID();
@@ -259,10 +284,10 @@ public class VaultControllerIntegrationTests {
                 "files", List.of(file(takenFile, secondVault, secondFolder, "note", "Clash"))
         );
 
-        migrate(tokenFor(second), clashing).statusCode(409)
+        migrate(tokenFor(second), clashing).statusCode(400)
                 .contentType(PROBLEM_JSON)
-                .body("statusCode", is(409))
-                .body("detail", equalTo(MigrationConflictException.MESSAGE));
+                .body("statusCode", is(400))
+                .body("detail", equalTo(MigrationService.NOT_SAVED_MESSAGE));
 
         assertEquals(0L, count("vaults", second.id));
         assertEquals(0L, count("folders", second.id));
@@ -271,7 +296,7 @@ public class VaultControllerIntegrationTests {
     }
 
     @Test
-    void migrate_WhenTheSamePayloadIsSentTwice_Returns409AndKeepsTheFirstCopy() {
+    void migrate_WhenTheSamePayloadIsSentTwice_Returns400AndKeepsTheFirstCopy() {
         User user = createUser("ada@example.com");
         UUID vaultId = UUID.randomUUID();
         Map<String, Object> payload = Map.of(
@@ -281,7 +306,7 @@ public class VaultControllerIntegrationTests {
         String token = tokenFor(user);
         migrate(token, payload).statusCode(201);
 
-        migrate(token, payload).statusCode(409);
+        migrate(token, payload).statusCode(400);
 
         assertEquals(1L, count("vaults", user.id));
         assertEquals(1L, count("files", user.id));
@@ -297,10 +322,19 @@ public class VaultControllerIntegrationTests {
     }
 
     private User createUser(String email) {
+        return createUser(email, Instant.now());
+    }
+
+    private User createUnverifiedUser(String email) {
+        return createUser(email, null);
+    }
+
+    private User createUser(String email, Instant verifiedAt) {
         return inTransaction(() -> {
             User user = new User();
             user.email = email;
             user.passwordHash = "not-a-real-hash";
+            user.emailVerifiedAt = verifiedAt;
             userRepository.persist(user);
             return user;
         });
@@ -324,14 +358,15 @@ public class VaultControllerIntegrationTests {
     }
 
     private static Map<String, Object> vault(UUID id, String name) {
-        return Map.of("id", id.toString(), "name", name);
+        return Map.of("id", id.toString(), "name", name, "createdAt", CREATED_AT);
     }
 
     private static Map<String, Object> folder(UUID id, UUID vaultId, UUID parentId) {
         return parentId == null
-                ? Map.of("id", id.toString(), "vaultId", vaultId.toString(), "name", "Folder")
+                ? Map.of("id", id.toString(), "vaultId", vaultId.toString(), "name", "Folder",
+                        "createdAt", CREATED_AT)
                 : Map.of("id", id.toString(), "vaultId", vaultId.toString(), "parentFolderId", parentId.toString(),
-                        "name", "Folder");
+                        "name", "Folder", "createdAt", CREATED_AT);
     }
 
     private static Map<String, Object> file(UUID id, UUID vaultId, UUID folderId, String type, String name) {
@@ -342,7 +377,6 @@ public class VaultControllerIntegrationTests {
         file.put("name", name);
         file.put("content", "Content of " + name);
         file.put("createdAt", CREATED_AT);
-        file.put("lastUpdatedAt", UPDATED_AT);
         if (folderId != null) {
             file.put("folderId", folderId.toString());
         }

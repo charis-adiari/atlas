@@ -13,10 +13,10 @@ import java.util.List;
  * @param backlinks Local links between those files
  */
 public record MigrationRequest(
-        @Valid List<VaultPayload> vaults,
-        @Valid List<FolderPayload> folders,
-        @Valid List<FilePayload> files,
-        @Valid List<BacklinkPayload> backlinks
+        @Valid List<VaultDto> vaults,
+        @Valid List<FolderDto> folders,
+        @Valid List<FileDto> files,
+        @Valid List<BacklinkDto> backlinks
 ) {
     public MigrationRequest {
         vaults = vaults == null ? List.of() : vaults;

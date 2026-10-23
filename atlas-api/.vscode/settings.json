@@ -1,4 +1,5 @@
 {
+  "java.compile.nullAnalysis.mode": "disabled",
   "editor.formatOnSave": true,
   "java.format.settings.url": "eclipse-formatter.xml",
   "java.format.settings.profile": "Project",

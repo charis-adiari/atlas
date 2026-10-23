@@ -2,7 +2,7 @@ package com.musketeers.api.middleware;
 
 import com.musketeers.dto.SignupRequest;
 import com.musketeers.dto.migration.MigrationRequest;
-import com.musketeers.dto.migration.VaultPayload;
+import com.musketeers.dto.migration.VaultDto;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
@@ -12,6 +12,7 @@ import org.hibernate.validator.HibernateValidator;
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,8 +35,8 @@ public class ConstraintViolationExceptionMapperTests {
         // Arrange
         MigrationRequest request = new MigrationRequest(
                 List.of(
-                        new VaultPayload(UUID.randomUUID(), "Fine", null, null),
-                        new VaultPayload(UUID.randomUUID(), "  ", null, null)),
+                        new VaultDto(UUID.randomUUID(), "Fine", Instant.now()),
+                        new VaultDto(UUID.randomUUID(), "  ", Instant.now())),
                 List.of(), List.of(), List.of());
         Set<ConstraintViolation<MigrationRequest>> violations = validator.validate(request);
 

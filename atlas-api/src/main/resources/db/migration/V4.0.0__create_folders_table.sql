@@ -8,7 +8,7 @@
 -- away, but the migration endpoint can run SET CONSTRAINTS fk_folders_parent DEFERRED and insert
 -- the uploaded folders in any order instead of sorting parents before children.
 --
--- Deleting a folder deletes its sub-folders and files (see V5.0.0), like deleting a directory.
+-- Deleting a folder deletes its sub-folders and files (see V6.0.0), like deleting a directory.
 -- A direct self-parent is rejected here; longer cycles (A -> B -> A) must be prevented by the
 -- application when it moves a folder.
 

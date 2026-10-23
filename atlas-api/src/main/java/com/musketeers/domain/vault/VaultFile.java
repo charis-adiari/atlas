@@ -2,6 +2,8 @@ package com.musketeers.domain.vault;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -24,8 +26,9 @@ public class VaultFile {
     @Column(name = "folder_id")
     public UUID folderId;
 
-    @Column(nullable = false)
-    public String type;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "file_type_code", nullable = false)
+    public FileType type;
 
     @Column(nullable = false)
     public String name;

@@ -1,13 +1,14 @@
 package com.musketeers.service.migration;
 
-import com.musketeers.dto.migration.BacklinkPayload;
-import com.musketeers.dto.migration.FilePayload;
-import com.musketeers.dto.migration.FolderPayload;
+import com.musketeers.domain.vault.FileType;
+import com.musketeers.dto.migration.BacklinkDto;
+import com.musketeers.dto.migration.FileDto;
+import com.musketeers.dto.migration.FolderDto;
 import com.musketeers.dto.migration.MigrationRequest;
-import com.musketeers.dto.migration.VaultPayload;
-import com.musketeers.exception.InvalidMigrationPayloadException;
+import com.musketeers.dto.migration.VaultDto;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MigrationPayloadCheckerTests {
+    private static final Instant CREATED_AT = Instant.parse("2025-01-02T03:04:05Z");
+
     private final MigrationPayloadChecker checker = new MigrationPayloadChecker();
 
     private final UUID vaultA = UUID.randomUUID();
@@ -53,7 +56,7 @@ public class MigrationPayloadCheckerTests {
     @Test
     void check_WhenFoldersFormAVeryLongChain_DoesNotThrow() {
         // Arrange
-        List<FolderPayload> chain = new ArrayList<>();
+        List<FolderDto> chain = new ArrayList<>();
         UUID parent = null;
         for (int i = 0; i < 20_000; i++) {
             UUID id = UUID.randomUUID();
@@ -69,15 +72,15 @@ public class MigrationPayloadCheckerTests {
     @Test
     void check_WhenAListContainsANullEntry_Throws() {
         // Arrange
-        MigrationRequest nullVault = request(Arrays.asList((VaultPayload) null), List.of(), List.of(), List.of());
-        MigrationRequest nullFolder = request(List.of(), Arrays.asList((FolderPayload) null), List.of(), List.of());
-        MigrationRequest nullFile = request(List.of(), List.of(), Arrays.asList((FilePayload) null), List.of());
-        MigrationRequest nullLink = request(List.of(), List.of(), List.of(), Arrays.asList((BacklinkPayload) null));
+        MigrationRequest nullVault = request(Arrays.asList((VaultDto) null), List.of(), List.of(), List.of());
+        MigrationRequest nullFolder = request(List.of(), Arrays.asList((FolderDto) null), List.of(), List.of());
+        MigrationRequest nullFile = request(List.of(), List.of(), Arrays.asList((FileDto) null), List.of());
+        MigrationRequest nullLink = request(List.of(), List.of(), List.of(), Arrays.asList((BacklinkDto) null));
 
         // Act & Assert
         for (MigrationRequest request : List.of(nullVault, nullFolder, nullFile, nullLink)) {
-            InvalidMigrationPayloadException ex = assertThrows(
-                    InvalidMigrationPayloadException.class, () -> checker.check(request));
+            IllegalArgumentException ex = assertThrows(
+                    IllegalArgumentException.class, () -> checker.check(request));
             assertTrue(ex.getMessage().contains("empty entry"), ex.getMessage());
         }
     }
@@ -154,8 +157,8 @@ public class MigrationPayloadCheckerTests {
                 List.of(), List.of());
 
         // Act
-        InvalidMigrationPayloadException ex = assertThrows(
-                InvalidMigrationPayloadException.class, () -> checker.check(request));
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class, () -> checker.check(request));
 
         // Assert
         assertTrue(ex.getMessage().contains("cycle"), ex.getMessage());
@@ -236,41 +239,41 @@ public class MigrationPayloadCheckerTests {
                 List.of(link(fileOne, fileTwo)));
 
         // Act
-        InvalidMigrationPayloadException ex = assertThrows(
-                InvalidMigrationPayloadException.class, () -> checker.check(request));
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class, () -> checker.check(request));
 
         // Assert
         assertTrue(ex.getMessage().contains("different vaults"), ex.getMessage());
     }
 
     private void assertRejectedMentioning(MigrationRequest request, UUID id) {
-        InvalidMigrationPayloadException ex = assertThrows(
-                InvalidMigrationPayloadException.class, () -> checker.check(request));
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class, () -> checker.check(request));
         assertTrue(ex.getMessage().contains(id.toString()), ex.getMessage());
     }
 
     private static MigrationRequest request(
-            List<VaultPayload> vaults,
-            List<FolderPayload> folders,
-            List<FilePayload> files,
-            List<BacklinkPayload> backlinks
+            List<VaultDto> vaults,
+            List<FolderDto> folders,
+            List<FileDto> files,
+            List<BacklinkDto> backlinks
     ) {
         return new MigrationRequest(vaults, folders, files, backlinks);
     }
 
-    private static VaultPayload vault(UUID id) {
-        return new VaultPayload(id, "Vault", null, null);
+    private static VaultDto vault(UUID id) {
+        return new VaultDto(id, "Vault", CREATED_AT);
     }
 
-    private static FolderPayload folder(UUID id, UUID vaultId, UUID parentId) {
-        return new FolderPayload(id, vaultId, parentId, "Folder", null, null);
+    private static FolderDto folder(UUID id, UUID vaultId, UUID parentId) {
+        return new FolderDto(id, vaultId, parentId, "Folder", CREATED_AT);
     }
 
-    private static FilePayload file(UUID id, UUID vaultId, UUID folderId) {
-        return new FilePayload(id, vaultId, folderId, "note", "File", "text", null, null);
+    private static FileDto file(UUID id, UUID vaultId, UUID folderId) {
+        return new FileDto(id, vaultId, folderId, FileType.NOTE, "File", "text", CREATED_AT);
     }
 
-    private static BacklinkPayload link(UUID source, UUID target) {
-        return new BacklinkPayload(source, target);
+    private static BacklinkDto link(UUID source, UUID target) {
+        return new BacklinkDto(source, target);
     }
 }

@@ -4,6 +4,7 @@ This project uses Java Quarkus.
 
 ## Table of Contents
 1. [Environment Setup](#environment-setup)
+1. [Email Verification](#email-verification)
 1. [Database Setup](#database-setup)
 1. [Code Style Guide](#code-style-guide)
 
@@ -19,7 +20,7 @@ This project uses Java Quarkus.
 
 1. Fill in the actual values in `.env`. For the database password, any value will do for local dev.
 1. If you add a new environment variable, add its key (with a placeholder or blank value) to `.env.example` so others know it's needed.
-1. Create a key pair for the access tokens: the private key signs the token issued at signup and the public key
+1. Create a key pair for the access tokens: the private key signs the access token issued at signup and the public key
    verifies it on protected endpoints. Both are git-ignored, so every developer makes their own. Run this from the API
    project root in Git Bash (Git for Windows ships `openssl`):
 
@@ -31,6 +32,21 @@ This project uses Java Quarkus.
    In production, set `SMALLRYE_JWT_SIGN_KEY_LOCATION=file:/path/to/privateKey.pem` and
    `MP_JWT_VERIFY_PUBLICKEY_LOCATION=file:/path/to/publicKey.pem` instead. Tests use their own throw-away pair,
    `testPrivateKey.pem` and `testPublicKey.pem` in `src/test/resources`.
+
+## Email Verification
+
+Signup creates the account, emails a verification link and signs the user in. Until the link is opened, protected
+endpoints that store data (such as `POST /vaults/migrate`) answer 403. The link opens the page at
+`app.auth.verification-page-address` with `#token=...` added (a fragment, so the token never reaches a server log or a
+referrer header), and that page reads it in the browser, removes it from the address bar and sends it to
+`POST /api/v1/auth/verify-email`. The endpoints `POST /api/v1/auth/resend-verification` and
+`GET /api/v1/auth/verification-status` need the signed-in user's access token.
+
+- In dev and test mode no email is really sent: Quarkus prints it to the console, so copy the link from there.
+- `app.auth.verification-token-lifetime` (default in `application.yml`: `PT24H`) is how long a link stays valid.
+- Neither setting has a default in code, so the app refuses to start when one is missing.
+- In production set these environment variables: `VERIFICATION_PAGE_ADDRESS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`
+  and `MAIL_PASSWORD`.
 
 ## Database Setup
 
@@ -70,7 +86,8 @@ Once the app is running, you can access the Swagger UI at <localhost:8080/q/swag
 docker compose down
 ```
 
-This stops the container but preserves your data. To wipe the data and start fresh, run `docker compose down -v`
+This stops the container but preserves your data. To wipe the data and start fresh, run `docker compose down -v`. Do this after pulling a change that renumbers or edits
+an existing migration, otherwise Flyway refuses to start because the applied scripts no longer match.
 
 ## Code Style Guide
 
@@ -111,4 +128,4 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
   e.g. `getUsers_WhenUserIsNotAdmin_ReturnsForbidden`, `getUsers_ReturnsUsers`, etc.
 - Every test, excluding integration tests, must include AAA comments (`// Arrange`, `// Act`, `// Assert`) marking
   each section, unless the section is empty.
-- A test coverage of 80% must be maintained
+- A test coverage of 80% must be maintained

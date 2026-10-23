@@ -6,13 +6,14 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
  * The only class that knows how passwords are hashed. The bcrypt output carries its own salt and cost, so the stored
- * string is all that is needed to verify a password later.
+ * string is all that is needed to verify a password later. The cost has no default: the application refuses to start
+ * when app.auth.bcrypt-cost is missing from the configuration.
  */
 @ApplicationScoped
 public class PasswordHasher {
     private final int cost;
 
-    public PasswordHasher(@ConfigProperty(name = "app.auth.bcrypt-cost", defaultValue = "12") int cost) {
+    public PasswordHasher(@ConfigProperty(name = "app.auth.bcrypt-cost") int cost) {
         this.cost = cost;
     }
 

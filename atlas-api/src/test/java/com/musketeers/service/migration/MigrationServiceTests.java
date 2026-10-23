@@ -1,43 +1,50 @@
 package com.musketeers.service.migration;
 
+import com.musketeers.api.vaults.mappers.MigrationMapperImpl;
 import com.musketeers.domain.User;
 import com.musketeers.domain.vault.Backlink;
+import com.musketeers.domain.vault.FileType;
 import com.musketeers.domain.vault.Folder;
 import com.musketeers.domain.vault.Vault;
 import com.musketeers.domain.vault.VaultFile;
-import com.musketeers.dto.migration.BacklinkPayload;
-import com.musketeers.dto.migration.FilePayload;
-import com.musketeers.dto.migration.FolderPayload;
+import com.musketeers.dto.migration.BacklinkDto;
+import com.musketeers.dto.migration.FileDto;
+import com.musketeers.dto.migration.FolderDto;
 import com.musketeers.dto.migration.MigrationRequest;
-import com.musketeers.dto.migration.MigrationResponse;
-import com.musketeers.dto.migration.VaultPayload;
-import com.musketeers.exception.InvalidMigrationPayloadException;
-import com.musketeers.exception.MigrationConflictException;
-import com.musketeers.repository.MigrationRepository;
+import com.musketeers.dto.migration.VaultDto;
 import com.musketeers.repository.UserRepository;
+import com.musketeers.repository.vault.BacklinkRepository;
+import com.musketeers.repository.vault.FileRepository;
+import com.musketeers.repository.vault.FolderRepository;
+import com.musketeers.repository.vault.VaultRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceException;
+import jakarta.ws.rs.ForbiddenException;
+import org.hibernate.exception.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.sql.SQLException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -52,19 +59,24 @@ public class MigrationServiceTests {
     private static final UUID NOTE_ID = UUID.randomUUID();
     private static final UUID CANVAS_ID = UUID.randomUUID();
     private static final Instant CREATED = Instant.parse("2025-01-02T03:04:05Z");
-    private static final Instant UPDATED = Instant.parse("2025-06-07T08:09:10Z");
 
     @Mock
     UserRepository userRepository;
 
     @Mock
-    MigrationRepository migrationRepository;
+    VaultRepository vaultRepository;
+
+    @Mock
+    FolderRepository folderRepository;
+
+    @Mock
+    FileRepository fileRepository;
+
+    @Mock
+    BacklinkRepository backlinkRepository;
 
     @Mock
     MigrationPayloadChecker checker;
-
-    @InjectMocks
-    MigrationService service;
 
     @Captor
     ArgumentCaptor<List<Vault>> vaults;
@@ -78,76 +90,71 @@ public class MigrationServiceTests {
     @Captor
     ArgumentCaptor<List<Backlink>> backlinks;
 
-    @Test
-    void migrate_StoresEveryRecordOwnedByTheUserAndReturnsTheCounts() {
-        // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
-        MigrationRequest request = fullRequest();
+    private MigrationService service;
 
-        // Act
-        MigrationResponse result = service.migrate(USER_ID, request);
-
-        // Assert
-        verify(checker).check(request);
-        verifyInserted();
-        assertEquals(new MigrationResponse(2, 2, 2, 1), result);
-        assertTrue(vaults.getValue().stream().allMatch(vault -> USER_ID.equals(vault.userId)));
-        assertEquals(List.of(VAULT_ID, OTHER_VAULT_ID), vaults.getValue().stream().map(v -> v.id).toList());
-        assertEquals(PARENT_ID, folders.getValue().get(0).parentFolderId);
-        assertEquals(CHILD_ID, files.getValue().get(0).folderId);
-        assertEquals("canvas", files.getValue().get(1).type);
+    @BeforeEach
+    void createService() {
+        service = new MigrationService(
+                userRepository, vaultRepository, folderRepository, fileRepository, backlinkRepository, checker,
+                new MigrationMapperImpl());
     }
 
     @Test
-    void migrate_KeepsTheTimestampsTheRecordsHadLocally() {
+    void migrate_StoresEveryRecordOwnedByTheUser() {
         // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
-        MigrationRequest request = new MigrationRequest(
-                List.of(new VaultPayload(VAULT_ID, "Vault", CREATED, UPDATED)),
-                List.of(new FolderPayload(PARENT_ID, VAULT_ID, null, "Folder", CREATED, UPDATED)),
-                List.of(new FilePayload(NOTE_ID, VAULT_ID, null, "note", "Note", "text", CREATED, UPDATED)),
-                List.of());
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
+        MigrationRequest request = fullRequest();
 
         // Act
         service.migrate(USER_ID, request);
 
         // Assert
+        verify(checker).check(request);
         verifyInserted();
-        assertEquals(CREATED, vaults.getValue().get(0).createdAt);
-        assertEquals(UPDATED, vaults.getValue().get(0).lastUpdatedAt);
-        assertEquals(CREATED, folders.getValue().get(0).createdAt);
-        assertEquals(UPDATED, folders.getValue().get(0).lastUpdatedAt);
-        assertEquals(CREATED, files.getValue().get(0).createdAt);
-        assertEquals(UPDATED, files.getValue().get(0).lastUpdatedAt);
+        assertTrue(vaults.getValue().stream().allMatch(vault -> USER_ID.equals(vault.userId)));
+        assertEquals(List.of(VAULT_ID, OTHER_VAULT_ID), vaults.getValue().stream().map(v -> v.id).toList());
+        assertEquals(2, folders.getValue().size());
+        assertEquals(PARENT_ID, folders.getValue().get(0).parentFolderId);
+        assertEquals(2, files.getValue().size());
+        assertEquals(CHILD_ID, files.getValue().get(0).folderId);
+        assertEquals(FileType.NOTE, files.getValue().get(0).type);
+        assertEquals(FileType.CANVAS, files.getValue().get(1).type);
+        assertEquals(1, backlinks.getValue().size());
     }
 
     @Test
-    void migrate_WhenTimestampsAreMissing_UsesTheCurrentTime() {
+    void migrate_KeepsTheCreationTimeAndSetsTheLastUpdatedTimeToTheMigrationTime() {
         // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
-        MigrationRequest request = new MigrationRequest(
-                List.of(new VaultPayload(VAULT_ID, "Vault", null, null)), List.of(), List.of(), List.of());
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
+        MigrationRequest request = fullRequest();
         Instant before = Instant.now();
 
         // Act
         service.migrate(USER_ID, request);
 
         // Assert
+        Instant after = Instant.now();
         verifyInserted();
-        Vault stored = vaults.getValue().get(0);
-        assertFalse(stored.createdAt.isBefore(before));
-        assertFalse(stored.createdAt.isAfter(Instant.now()));
-        assertEquals(stored.createdAt, stored.lastUpdatedAt);
+        Vault vault = vaults.getValue().get(0);
+        Folder folder = folders.getValue().get(0);
+        VaultFile file = files.getValue().get(0);
+        assertEquals(CREATED, vault.createdAt);
+        assertEquals(CREATED, folder.createdAt);
+        assertEquals(CREATED, file.createdAt);
+        for (Instant lastUpdatedAt : List.of(vault.lastUpdatedAt, folder.lastUpdatedAt, file.lastUpdatedAt)) {
+            assertFalse(lastUpdatedAt.isBefore(before));
+            assertFalse(lastUpdatedAt.isAfter(after));
+        }
     }
 
     @Test
     void migrate_WhenFileContentIsMissing_StoresEmptyContent() {
         // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
         MigrationRequest request = new MigrationRequest(
-                List.of(new VaultPayload(VAULT_ID, "Vault", null, null)),
+                List.of(new VaultDto(VAULT_ID, "Vault", CREATED)),
                 List.of(),
-                List.of(new FilePayload(NOTE_ID, VAULT_ID, null, "note", "Note", null, null, null)),
+                List.of(new FileDto(NOTE_ID, VAULT_ID, null, FileType.NOTE, "Note", null, CREATED)),
                 List.of());
 
         // Act
@@ -161,26 +168,47 @@ public class MigrationServiceTests {
     @Test
     void migrate_WhenABacklinkIsRepeated_StoresItOnceInTheVaultOfItsSourceFile() {
         // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
         MigrationRequest request = new MigrationRequest(
-                List.of(new VaultPayload(VAULT_ID, "Vault", null, null)),
+                List.of(new VaultDto(VAULT_ID, "Vault", CREATED)),
                 List.of(),
                 List.of(
-                        new FilePayload(NOTE_ID, VAULT_ID, null, "note", "A", "", null, null),
-                        new FilePayload(CANVAS_ID, VAULT_ID, null, "canvas", "B", "", null, null)),
-                List.of(new BacklinkPayload(NOTE_ID, CANVAS_ID), new BacklinkPayload(NOTE_ID, CANVAS_ID)));
+                        new FileDto(NOTE_ID, VAULT_ID, null, FileType.NOTE, "A", "", CREATED),
+                        new FileDto(CANVAS_ID, VAULT_ID, null, FileType.CANVAS, "B", "", CREATED)),
+                List.of(new BacklinkDto(NOTE_ID, CANVAS_ID), new BacklinkDto(NOTE_ID, CANVAS_ID)));
+        Instant before = Instant.now();
 
         // Act
-        MigrationResponse result = service.migrate(USER_ID, request);
+        service.migrate(USER_ID, request);
 
         // Assert
         verifyInserted();
-        assertEquals(1, result.backlinks());
+        assertEquals(1, backlinks.getValue().size());
         Backlink stored = backlinks.getValue().get(0);
         assertEquals(VAULT_ID, stored.vaultId);
         assertEquals(NOTE_ID, stored.sourceFileId);
         assertEquals(CANVAS_ID, stored.targetFileId);
-        assertNotNull(stored.id);
+        assertFalse(stored.createdAt.isBefore(before.truncatedTo(ChronoUnit.MILLIS)));
+        assertNull(stored.id);
+    }
+
+    @Test
+    void migrate_PostponesTheParentCheckUntilEverythingIsFlushed() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
+
+        // Act
+        service.migrate(USER_ID, fullRequest());
+
+        // Assert
+        InOrder order = inOrder(folderRepository, vaultRepository, fileRepository, backlinkRepository);
+        order.verify(folderRepository).deferParentCheck();
+        order.verify(vaultRepository).persist(vaults.capture());
+        order.verify(folderRepository).persist(folders.capture());
+        order.verify(fileRepository).persist(files.capture());
+        order.verify(backlinkRepository).persist(backlinks.capture());
+        order.verify(backlinkRepository).flush();
+        order.verify(folderRepository).runParentCheck();
     }
 
     @Test
@@ -190,42 +218,55 @@ public class MigrationServiceTests {
 
         // Act & Assert
         assertThrows(EntityNotFoundException.class, () -> service.migrate(USER_ID, fullRequest()));
-        verifyNoInteractions(checker, migrationRepository);
+        verifyNoInteractions(checker, vaultRepository, folderRepository, fileRepository, backlinkRepository);
+    }
+
+    @Test
+    void migrate_WhenEmailIsNotVerified_ThrowsForbiddenException() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(new User());
+
+        // Act
+        ForbiddenException ex = assertThrows(ForbiddenException.class, () -> service.migrate(USER_ID, fullRequest()));
+
+        // Assert
+        assertEquals(MigrationService.UNVERIFIED_EMAIL_MESSAGE, ex.getMessage());
+        verifyNoInteractions(checker, vaultRepository, folderRepository, fileRepository, backlinkRepository);
     }
 
     @Test
     void migrate_WhenPayloadIsInconsistent_StoresNothing() {
         // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
         MigrationRequest request = fullRequest();
-        doThrow(new InvalidMigrationPayloadException("bad")).when(checker).check(request);
+        doThrow(new IllegalArgumentException("bad")).when(checker).check(request);
 
         // Act & Assert
-        assertThrows(InvalidMigrationPayloadException.class, () -> service.migrate(USER_ID, request));
-        verifyNoInteractions(migrationRepository);
+        assertThrows(IllegalArgumentException.class, () -> service.migrate(USER_ID, request));
+        verifyNoInteractions(vaultRepository, folderRepository, fileRepository, backlinkRepository);
     }
 
     @Test
-    void migrate_WhenIdsAreAlreadyInUse_ThrowsMigrationConflictException() {
+    void migrate_WhenIdsAreAlreadyInUse_ThrowsIllegalArgumentExceptionWithGenericMessage() {
         // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
-        SQLException duplicate = new SQLException("ERROR: duplicate key value violates unique constraint", "23505");
-        doThrow(new PersistenceException(duplicate)).when(migrationRepository).insertAll(any(), any(), any(), any());
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
+        PersistenceException duplicate = new PersistenceException(mock(ConstraintViolationException.class));
+        doThrow(duplicate).when(vaultRepository).persist(ArgumentMatchers.<Vault>anyList());
 
         // Act
-        MigrationConflictException ex = assertThrows(
-                MigrationConflictException.class, () -> service.migrate(USER_ID, fullRequest()));
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class, () -> service.migrate(USER_ID, fullRequest()));
 
         // Assert
-        assertEquals(MigrationConflictException.MESSAGE, ex.getMessage());
+        assertEquals(MigrationService.NOT_SAVED_MESSAGE, ex.getMessage());
     }
 
     @Test
     void migrate_WhenDatabaseFailsForAnotherReason_RethrowsTheError() {
         // Arrange
-        when(userRepository.findById(USER_ID)).thenReturn(new User());
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
         PersistenceException failure = new PersistenceException("connection lost");
-        doThrow(failure).when(migrationRepository).insertAll(any(), any(), any(), any());
+        doThrow(failure).when(vaultRepository).persist(ArgumentMatchers.<Vault>anyList());
 
         // Act
         PersistenceException thrown = assertThrows(
@@ -236,20 +277,29 @@ public class MigrationServiceTests {
     }
 
     private void verifyInserted() {
-        verify(migrationRepository).insertAll(vaults.capture(), folders.capture(), files.capture(), backlinks.capture());
+        verify(vaultRepository).persist(vaults.capture());
+        verify(folderRepository).persist(folders.capture());
+        verify(fileRepository).persist(files.capture());
+        verify(backlinkRepository).persist(backlinks.capture());
+    }
+
+    private static User verifiedUser() {
+        User user = new User();
+        user.emailVerifiedAt = Instant.now();
+        return user;
     }
 
     private static MigrationRequest fullRequest() {
         return new MigrationRequest(
                 List.of(
-                        new VaultPayload(VAULT_ID, "First", null, null),
-                        new VaultPayload(OTHER_VAULT_ID, "Second", null, null)),
+                        new VaultDto(VAULT_ID, "First", CREATED),
+                        new VaultDto(OTHER_VAULT_ID, "Second", CREATED)),
                 List.of(
-                        new FolderPayload(CHILD_ID, VAULT_ID, PARENT_ID, "Child", null, null),
-                        new FolderPayload(PARENT_ID, VAULT_ID, null, "Parent", null, null)),
+                        new FolderDto(CHILD_ID, VAULT_ID, PARENT_ID, "Child", CREATED),
+                        new FolderDto(PARENT_ID, VAULT_ID, null, "Parent", CREATED)),
                 List.of(
-                        new FilePayload(NOTE_ID, VAULT_ID, CHILD_ID, "note", "Note", "text", null, null),
-                        new FilePayload(CANVAS_ID, VAULT_ID, null, "canvas", "Canvas", "{}", null, null)),
-                List.of(new BacklinkPayload(NOTE_ID, CANVAS_ID)));
+                        new FileDto(NOTE_ID, VAULT_ID, CHILD_ID, FileType.NOTE, "Note", "text", CREATED),
+                        new FileDto(CANVAS_ID, VAULT_ID, null, FileType.CANVAS, "Canvas", "{}", CREATED)),
+                List.of(new BacklinkDto(NOTE_ID, CANVAS_ID)));
     }
 }

@@ -1,11 +1,10 @@
 package com.musketeers.service.migration;
 
-import com.musketeers.dto.migration.BacklinkPayload;
-import com.musketeers.dto.migration.FilePayload;
-import com.musketeers.dto.migration.FolderPayload;
+import com.musketeers.dto.migration.BacklinkDto;
+import com.musketeers.dto.migration.FileDto;
+import com.musketeers.dto.migration.FolderDto;
 import com.musketeers.dto.migration.MigrationRequest;
-import com.musketeers.dto.migration.VaultPayload;
-import com.musketeers.exception.InvalidMigrationPayloadException;
+import com.musketeers.dto.migration.VaultDto;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.HashMap;
@@ -28,12 +27,12 @@ public class MigrationPayloadChecker {
      * Checks the whole payload and stops at the first problem.
      *
      * @param request the payload that passed field validation
-     * @throws InvalidMigrationPayloadException if any record is inconsistent
+     * @throws IllegalArgumentException if any record is inconsistent
      */
     public void check(MigrationRequest request) {
         checkNoNullEntries(request);
         Set<UUID> vaultIds = collectVaultIds(request.vaults());
-        Map<UUID, FolderPayload> folders = indexFolders(request.folders(), vaultIds);
+        Map<UUID, FolderDto> folders = indexFolders(request.folders(), vaultIds);
         checkFolderParents(folders);
         checkNoFolderCycles(folders);
         Map<UUID, UUID> fileVaults = indexFiles(request.files(), vaultIds, folders);
@@ -56,18 +55,18 @@ public class MigrationPayloadChecker {
      */
     private void rejectNulls(List<?> entries, String name) {
         if (entries.stream().anyMatch(Objects::isNull)) {
-            throw new InvalidMigrationPayloadException("The " + name + " list contains an empty entry");
+            throw new IllegalArgumentException("The " + name + " list contains an empty entry");
         }
     }
 
     /**
      * Collects the vault ids, rejecting duplicates.
      */
-    private Set<UUID> collectVaultIds(List<VaultPayload> vaults) {
+    private Set<UUID> collectVaultIds(List<VaultDto> vaults) {
         Set<UUID> ids = new HashSet<>();
-        for (VaultPayload vault : vaults) {
+        for (VaultDto vault : vaults) {
             if (!ids.add(vault.id())) {
-                throw new InvalidMigrationPayloadException("Duplicate vault id " + vault.id());
+                throw new IllegalArgumentException("Duplicate vault id " + vault.id());
             }
         }
         return ids;
@@ -76,14 +75,14 @@ public class MigrationPayloadChecker {
     /**
      * Indexes the folders by id, rejecting duplicates and folders in a vault that was not uploaded.
      */
-    private Map<UUID, FolderPayload> indexFolders(List<FolderPayload> folders, Set<UUID> vaultIds) {
-        Map<UUID, FolderPayload> byId = new HashMap<>();
-        for (FolderPayload folder : folders) {
+    private Map<UUID, FolderDto> indexFolders(List<FolderDto> folders, Set<UUID> vaultIds) {
+        Map<UUID, FolderDto> byId = new HashMap<>();
+        for (FolderDto folder : folders) {
             if (byId.put(folder.id(), folder) != null) {
-                throw new InvalidMigrationPayloadException("Duplicate folder id " + folder.id());
+                throw new IllegalArgumentException("Duplicate folder id " + folder.id());
             }
             if (!vaultIds.contains(folder.vaultId())) {
-                throw new InvalidMigrationPayloadException(
+                throw new IllegalArgumentException(
                         "Folder " + folder.id() + " is in vault " + folder.vaultId() + ", which was not uploaded");
             }
         }
@@ -93,18 +92,18 @@ public class MigrationPayloadChecker {
     /**
      * Checks that every parent folder was uploaded and is in the same vault as its child.
      */
-    private void checkFolderParents(Map<UUID, FolderPayload> folders) {
-        for (FolderPayload folder : folders.values()) {
+    private void checkFolderParents(Map<UUID, FolderDto> folders) {
+        for (FolderDto folder : folders.values()) {
             if (folder.parentFolderId() == null) {
                 continue;
             }
-            FolderPayload parent = folders.get(folder.parentFolderId());
+            FolderDto parent = folders.get(folder.parentFolderId());
             if (parent == null) {
-                throw new InvalidMigrationPayloadException(
+                throw new IllegalArgumentException(
                         "Folder " + folder.id() + " has parent " + folder.parentFolderId() + ", which was not uploaded");
             }
             if (!parent.vaultId().equals(folder.vaultId())) {
-                throw new InvalidMigrationPayloadException(
+                throw new IllegalArgumentException(
                         "Folder " + folder.id() + " and its parent " + parent.id() + " are in different vaults");
             }
         }
@@ -116,14 +115,14 @@ public class MigrationPayloadChecker {
      * that is its own parent is the smallest cycle and is caught the same way. It needs every parent to exist, so it
      * runs after {@link #checkFolderParents}.
      */
-    private void checkNoFolderCycles(Map<UUID, FolderPayload> folders) {
+    private void checkNoFolderCycles(Map<UUID, FolderDto> folders) {
         Set<UUID> safe = new HashSet<>();
         for (UUID start : folders.keySet()) {
             Set<UUID> path = new HashSet<>();
             UUID current = start;
             while (current != null && !safe.contains(current)) {
                 if (!path.add(current)) {
-                    throw new InvalidMigrationPayloadException("Folder " + current + " is part of a folder cycle");
+                    throw new IllegalArgumentException("Folder " + current + " is part of a folder cycle");
                 }
                 current = folders.get(current).parentFolderId();
             }
@@ -137,14 +136,14 @@ public class MigrationPayloadChecker {
      *
      * @return the vault of each file, keyed by file id, which the backlinks are checked against
      */
-    private Map<UUID, UUID> indexFiles(List<FilePayload> files, Set<UUID> vaultIds, Map<UUID, FolderPayload> folders) {
+    private Map<UUID, UUID> indexFiles(List<FileDto> files, Set<UUID> vaultIds, Map<UUID, FolderDto> folders) {
         Map<UUID, UUID> fileVaults = new HashMap<>();
-        for (FilePayload file : files) {
+        for (FileDto file : files) {
             if (fileVaults.put(file.id(), file.vaultId()) != null) {
-                throw new InvalidMigrationPayloadException("Duplicate file id " + file.id());
+                throw new IllegalArgumentException("Duplicate file id " + file.id());
             }
             if (!vaultIds.contains(file.vaultId())) {
-                throw new InvalidMigrationPayloadException(
+                throw new IllegalArgumentException(
                         "File " + file.id() + " is in vault " + file.vaultId() + ", which was not uploaded");
             }
             checkFileFolder(file, folders);
@@ -155,17 +154,17 @@ public class MigrationPayloadChecker {
     /**
      * Checks that the folder of a file, if it has one, was uploaded and is in the same vault as the file.
      */
-    private void checkFileFolder(FilePayload file, Map<UUID, FolderPayload> folders) {
+    private void checkFileFolder(FileDto file, Map<UUID, FolderDto> folders) {
         if (file.folderId() == null) {
             return;
         }
-        FolderPayload folder = folders.get(file.folderId());
+        FolderDto folder = folders.get(file.folderId());
         if (folder == null) {
-            throw new InvalidMigrationPayloadException(
+            throw new IllegalArgumentException(
                     "File " + file.id() + " is in folder " + file.folderId() + ", which was not uploaded");
         }
         if (!folder.vaultId().equals(file.vaultId())) {
-            throw new InvalidMigrationPayloadException(
+            throw new IllegalArgumentException(
                     "File " + file.id() + " and its folder " + folder.id() + " are in different vaults");
         }
     }
@@ -173,20 +172,20 @@ public class MigrationPayloadChecker {
     /**
      * Checks that both ends of every backlink were uploaded and are in the same vault.
      */
-    private void checkBacklinks(List<BacklinkPayload> backlinks, Map<UUID, UUID> fileVaults) {
-        for (BacklinkPayload backlink : backlinks) {
+    private void checkBacklinks(List<BacklinkDto> backlinks, Map<UUID, UUID> fileVaults) {
+        for (BacklinkDto backlink : backlinks) {
             UUID sourceVault = fileVaults.get(backlink.sourceFileId());
             UUID targetVault = fileVaults.get(backlink.targetFileId());
             if (sourceVault == null) {
-                throw new InvalidMigrationPayloadException(
+                throw new IllegalArgumentException(
                         "Backlink source file " + backlink.sourceFileId() + " was not uploaded");
             }
             if (targetVault == null) {
-                throw new InvalidMigrationPayloadException(
+                throw new IllegalArgumentException(
                         "Backlink target file " + backlink.targetFileId() + " was not uploaded");
             }
             if (!sourceVault.equals(targetVault)) {
-                throw new InvalidMigrationPayloadException(
+                throw new IllegalArgumentException(
                         "Backlink from " + backlink.sourceFileId() + " to " + backlink.targetFileId()
                                 + " joins files in different vaults");
             }

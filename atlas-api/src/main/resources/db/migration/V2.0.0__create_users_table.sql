@@ -4,9 +4,10 @@
 -- database enforce that, so the plain UNIQUE constraint is effectively case-insensitive and two
 -- simultaneous signups with the same address cannot both succeed.
 --
--- email_verified_at is NULL until the user confirms their address (optional step in US-02).
+-- email_verified_at is NULL until the user opens the link emailed to them (the tokens behind that link are
+-- stored by V9.0.0).
 --
--- users.last_opened_vault_id is added later, in V7.0.0: it points at vaults, which does not exist yet.
+-- users.last_opened_vault_id is added later, in V8.0.0: it points at vaults, which does not exist yet.
 
 CREATE TABLE users (
     id                uuid         PRIMARY KEY DEFAULT gen_random_uuid(),

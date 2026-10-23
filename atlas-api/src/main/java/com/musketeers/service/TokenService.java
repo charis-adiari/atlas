@@ -9,7 +9,8 @@ import java.time.Duration;
 
 /**
  * Issues access tokens. The signing key comes from smallrye.jwt.sign.key.location (an RSA private key in PKCS#8 PEM
- * format); the matching public key is what protected endpoints will verify against.
+ * format); the matching public key is what protected endpoints will verify against. The issuer and lifetime have no
+ * defaults: the application refuses to start when either is missing from the configuration.
  */
 @ApplicationScoped
 public class TokenService {
@@ -20,7 +21,7 @@ public class TokenService {
 
     public TokenService(
             @ConfigProperty(name = "app.auth.issuer") String issuer,
-            @ConfigProperty(name = "app.auth.token-ttl", defaultValue = "PT1H") Duration ttl
+            @ConfigProperty(name = "app.auth.token-ttl") Duration ttl
     ) {
         this.issuer = issuer;
         this.ttl = ttl;

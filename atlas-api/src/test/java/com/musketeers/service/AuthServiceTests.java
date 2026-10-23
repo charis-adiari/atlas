@@ -1,12 +1,10 @@
 package com.musketeers.service;
 
-import com.musketeers.api.auth.mappers.UserMapper;
 import com.musketeers.domain.User;
 import com.musketeers.dto.SignupResponse;
-import com.musketeers.dto.UserDto;
-import com.musketeers.exception.EmailAlreadyRegisteredException;
 import com.musketeers.repository.UserRepository;
 import jakarta.persistence.PersistenceException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -16,15 +14,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.sql.SQLException;
-import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -35,10 +32,9 @@ public class AuthServiceTests {
     private static final String EMAIL = "ada@example.com";
     private static final String PASSWORD = "Str0ng!Pass";
     private static final String HASH = "$2a$12$hashed";
-    private static final String TOKEN = "signed-jwt";
+    private static final String ACCESS_TOKEN = "signed-access-token";
+    private static final String VERIFICATION_TOKEN = "verification-token";
     private static final long TTL_SECONDS = 3600L;
-    private static final String DUPLICATE_EMAIL_MESSAGE = "ERROR: duplicate key value violates unique constraint "
-            + "\"uq_users_email\"";
 
     @Mock
     UserRepository repository;
@@ -50,7 +46,7 @@ public class AuthServiceTests {
     TokenService tokenService;
 
     @Mock
-    UserMapper mapper;
+    EmailVerificationService emailVerificationService;
 
     @InjectMocks
     AuthService service;
@@ -59,20 +55,17 @@ public class AuthServiceTests {
     ArgumentCaptor<User> saved;
 
     @Test
-    void signup_ReturnsUserAndAccessToken() {
+    void signup_ReturnsAccessTokenWithoutUserDetails() {
         // Arrange
-        UserDto userDto = new UserDto(UUID.randomUUID(), EMAIL);
         when(hasher.hash(PASSWORD)).thenReturn(HASH);
-        when(mapper.toDto(any(User.class))).thenReturn(userDto);
-        when(tokenService.issue(any(User.class))).thenReturn(TOKEN);
+        when(tokenService.issue(any(User.class))).thenReturn(ACCESS_TOKEN);
         when(tokenService.getTtlSeconds()).thenReturn(TTL_SECONDS);
 
         // Act
         SignupResponse result = service.signup(EMAIL, PASSWORD);
 
         // Assert
-        assertEquals(userDto, result.user());
-        assertEquals(TOKEN, result.accessToken());
+        assertEquals(ACCESS_TOKEN, result.accessToken());
         assertEquals("Bearer", result.tokenType());
         assertEquals(TTL_SECONDS, result.expiresIn());
     }
@@ -92,6 +85,20 @@ public class AuthServiceTests {
     }
 
     @Test
+    void signup_WhenEmailHasCapitals_LooksItUpAndStoresItLowerCased() {
+        // Arrange
+        when(hasher.hash(PASSWORD)).thenReturn(HASH);
+
+        // Act
+        service.signup("Ada@Example.COM", PASSWORD);
+
+        // Assert
+        verify(repository).findByEmailIgnoreCase(EMAIL);
+        verify(repository).persistAndFlush(saved.capture());
+        assertEquals(EMAIL, saved.getValue().email);
+    }
+
+    @Test
     void signup_HashesThePasswordBeforeTouchingTheDatabase() {
         // Arrange
         when(hasher.hash(PASSWORD)).thenReturn(HASH);
@@ -102,44 +109,73 @@ public class AuthServiceTests {
         // Assert
         InOrder order = inOrder(hasher, repository);
         order.verify(hasher).hash(PASSWORD);
+        order.verify(repository).findByEmailIgnoreCase(EMAIL);
         order.verify(repository).persistAndFlush(any(User.class));
     }
 
     @Test
-    void signup_WhenEmailIsAlreadyRegistered_ThrowsEmailAlreadyRegisteredException() {
+    void signup_EmailsTheVerificationTokenToTheNewUser() {
         // Arrange
         when(hasher.hash(PASSWORD)).thenReturn(HASH);
-        when(repository.findByEmail(EMAIL)).thenReturn(new User());
+        when(emailVerificationService.createToken(any(User.class))).thenReturn(VERIFICATION_TOKEN);
 
         // Act
-        EmailAlreadyRegisteredException ex = assertThrows(
-                EmailAlreadyRegisteredException.class,
-                () -> service.signup(EMAIL, PASSWORD)
-        );
+        service.signup(EMAIL, PASSWORD);
 
         // Assert
-        assertEquals(EmailAlreadyRegisteredException.MESSAGE, ex.getMessage());
-        verify(repository, never()).persistAndFlush(any(User.class));
-        verifyNoInteractions(tokenService);
+        verify(emailVerificationService).sendEmail(saved.capture(), eq(VERIFICATION_TOKEN));
+        assertEquals(EMAIL, saved.getValue().email);
     }
 
     @Test
-    void signup_WhenUniqueConstraintFailsDuringSimultaneousSignup_ThrowsEmailAlreadyRegisteredException() {
+    void signup_WhenVerificationEmailCannotBeSent_StillReturnsAccessToken() {
         // Arrange
         when(hasher.hash(PASSWORD)).thenReturn(HASH);
-        when(repository.findByEmail(EMAIL)).thenReturn(null);
-        SQLException duplicate = new SQLException(DUPLICATE_EMAIL_MESSAGE, "23505");
-        doThrow(new PersistenceException(duplicate)).when(repository).persistAndFlush(any(User.class));
+        when(tokenService.issue(any(User.class))).thenReturn(ACCESS_TOKEN);
+        doThrow(new RuntimeException("mail server is down")).when(emailVerificationService)
+                .sendEmail(any(User.class), any());
 
         // Act
-        EmailAlreadyRegisteredException ex = assertThrows(
-                EmailAlreadyRegisteredException.class,
+        SignupResponse result = service.signup(EMAIL, PASSWORD);
+
+        // Assert
+        assertEquals(ACCESS_TOKEN, result.accessToken());
+    }
+
+    @Test
+    void signup_WhenEmailIsAlreadyRegistered_ThrowsIllegalArgumentExceptionWithGenericMessage() {
+        // Arrange
+        when(hasher.hash(PASSWORD)).thenReturn(HASH);
+        when(repository.findByEmailIgnoreCase(EMAIL)).thenReturn(new User());
+
+        // Act
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
                 () -> service.signup(EMAIL, PASSWORD)
         );
 
         // Assert
-        assertEquals(EmailAlreadyRegisteredException.MESSAGE, ex.getMessage());
-        verifyNoInteractions(tokenService);
+        assertEquals(AuthService.SIGNUP_FAILED_MESSAGE, ex.getMessage());
+        verify(repository, never()).persistAndFlush(any(User.class));
+        verifyNoInteractions(tokenService, emailVerificationService);
+    }
+
+    @Test
+    void signup_WhenConstraintFailsDuringSimultaneousSignup_ThrowsIllegalArgumentExceptionWithGenericMessage() {
+        // Arrange
+        when(hasher.hash(PASSWORD)).thenReturn(HASH);
+        PersistenceException duplicate = new PersistenceException(mock(ConstraintViolationException.class));
+        doThrow(duplicate).when(repository).persistAndFlush(any(User.class));
+
+        // Act
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.signup(EMAIL, PASSWORD)
+        );
+
+        // Assert
+        assertEquals(AuthService.SIGNUP_FAILED_MESSAGE, ex.getMessage());
+        verifyNoInteractions(tokenService, emailVerificationService);
     }
 
     @Test
@@ -154,6 +190,6 @@ public class AuthServiceTests {
 
         // Assert
         assertSame(failure, thrown);
-        verifyNoInteractions(tokenService);
+        verifyNoInteractions(tokenService, emailVerificationService);
     }
 }

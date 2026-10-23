@@ -11,6 +11,7 @@ import java.util.Map;
  * failures additionally carry one message per field in "errors", which is left out of the response when empty.
  */
 public final class ApiProblemDetail {
+    @SuppressWarnings("unused")
     private ApiProblemDetail() {}
 
     public ApiProblemDetail(int statusCode, String title, String detail) {

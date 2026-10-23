@@ -5,9 +5,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -31,29 +31,13 @@ public class User {
     @Column(name = "email_verified_at")
     public Instant emailVerifiedAt;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     public Instant createdAt;
 
+    @UpdateTimestamp
     @Column(name = "last_updated_at", nullable = false)
     public Instant lastUpdatedAt;
-
-    /**
-     * Sets both timestamps when the user is first stored.
-     */
-    @PrePersist
-    void onCreate() {
-        Instant now = Instant.now();
-        createdAt = now;
-        lastUpdatedAt = now;
-    }
-
-    /**
-     * Refreshes the last updated timestamp whenever the user changes.
-     */
-    @PreUpdate
-    void onUpdate() {
-        lastUpdatedAt = Instant.now();
-    }
 
     /**
      * Prints the id only, so the password hash can never end up in a log line.

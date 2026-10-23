@@ -4,11 +4,19 @@ import com.musketeers.domain.User;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @ApplicationScoped
 public class UserRepository implements PanacheRepositoryBase<User, UUID> {
-    public User findByEmail(String email) {
-        return find("email", email).firstResult();
+    /**
+     * Finds the user with the given email address, whatever the capitalisation of either side.
+     *
+     * @param email the address to look for
+     * @return the user, or null if no account uses the address
+     */
+    public User findByEmailIgnoreCase(String email) {
+        return find("lower(email) = :email", Map.<String, Object>of("email", email.toLowerCase(Locale.ROOT))).firstResult();
     }
 }
