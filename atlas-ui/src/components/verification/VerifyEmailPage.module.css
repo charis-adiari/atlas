@@ -1,6 +1,6 @@
 .main {
   display: grid;
-  flex: 1;
+  height: 100%;
   place-items: center;
   padding: 24px;
 }
@@ -48,7 +48,7 @@
 }
 
 .link {
-  color: var(--accent-link);
+  color: var(--primary-link);
   text-decoration: underline;
 }
 

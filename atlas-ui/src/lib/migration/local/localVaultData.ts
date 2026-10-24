@@ -2,6 +2,8 @@ import type { MigrationRequest } from '@/types/migration';
 
 export const LOCAL_VAULT_DATA_KEY = 'atlas.local-vault-data';
 export const MIGRATION_RECORD_KEY = 'atlas.local-vault-data.migrated';
+export const STORE_META_KEY = 'atlas:meta';
+export const STORE_VAULT_KEY_PREFIX = 'atlas:vaults:';
 
 const VAULT_FIELDS = ['id', 'name', 'createdAt'] as const;
 const FOLDER_FIELDS = ['id', 'vaultId', 'parentFolderId', 'name', 'createdAt'] as const;
@@ -9,25 +11,25 @@ const FILE_FIELDS = ['id', 'vaultId', 'folderId', 'type', 'name', 'content', 'cr
 const BACKLINK_FIELDS = ['sourceFileId', 'targetFileId'] as const;
 const TIMESTAMP_FIELDS: readonly string[] = ['createdAt'];
 
+const EPOCH_MILLISECONDS = /^\d+$/;
+
 type RawRecord = Record<string, unknown>;
 
 /**
- * Reads the vault data kept on this device that has not been migrated to an account yet. Placeholder: local vault storage is
- * being built by another team member, so this reads the contract documented in the README and is the one place to change
- * when the real storage lands. Vaults that were migrated
- * earlier are left out together with their folders, files and backlinks. Only the fields the API knows are returned,
- * so nothing else that is stored locally can end up in an upload. Data that cannot be read is treated as absent and
- * left untouched.
+ * Reads the vault data kept on this device that has not been migrated to an account yet. The vaults come from the
+ * local vault store, which keeps an index under atlas:meta and one entry per vault under atlas:vaults:. That store does
+ * not keep folders, files or backlinks yet, so those can only come from the full-data contract documented in the
+ * README, which is read as well and is the place to change once the store keeps them. If both name the same vault, the
+ * contract wins. Vaults that were migrated earlier are left out together with their folders, files and backlinks. Only
+ * the fields the API knows are returned, so nothing else that is stored locally can end up in an upload. Data that
+ * cannot be read is treated as absent and left untouched.
  *
  * @returns the data to migrate, or null if there is no vault to migrate
  */
 export function readUnmigratedVaultData(): MigrationRequest | null {
   const raw = readItem(LOCAL_VAULT_DATA_KEY);
-  const data = raw === null ? null : parseVaultData(raw);
-
-  if (data === null) {
-    return null;
-  }
+  const contract = raw === null ? null : parseVaultData(raw);
+  const data = addStoreVaults(contract ?? { vaults: [], folders: [], files: [], backlinks: [] });
 
   const unmigrated = excludeVaults(data, readMigratedVaultIds());
   return unmigrated.vaults.length > 0 ? unmigrated : null;
@@ -43,6 +45,41 @@ export function markVaultDataMigrated(userId: string, data: MigrationRequest): v
 
   const record = { userId, migratedAt: new Date().toISOString(), vaultIds: [...vaultIds] };
   writeItem(MIGRATION_RECORD_KEY, JSON.stringify(record));
+}
+
+/**
+ * Adds the vaults of the local vault store that the data does not already have. A vault without a name cannot be
+ * uploaded, so it is left out instead of making the whole upload fail. A vault whose creation time cannot be read gets
+ * the current time, the same way the store itself fills it in.
+ */
+function addStoreVaults(data: MigrationRequest): MigrationRequest {
+  const knownIds = new Set(data.vaults.map((vault) => vault.id));
+  const added = readStoreVaultIds().flatMap((id) => {
+    const stored = parseJson(readItem(`${STORE_VAULT_KEY_PREFIX}${id}`) ?? '');
+    if (knownIds.has(id) || !isRecord(stored) || typeof stored.name !== 'string') {
+      return [];
+    }
+    if (stored.name.trim() === '') {
+      return [];
+    }
+    const createdAt = toIsoTimestamp(stored.createdAt) ?? new Date().toISOString();
+    return [{ id, name: stored.name, createdAt }];
+  });
+
+  return { ...data, vaults: [...data.vaults, ...added] };
+}
+
+/**
+ * Reads the ids of the vaults in the local vault store's index, ignoring an index that is damaged.
+ */
+function readStoreVaultIds(): string[] {
+  const raw = readItem(STORE_META_KEY);
+  const meta = raw === null ? null : parseJson(raw);
+
+  if (!isRecord(meta) || !Array.isArray(meta.vaultIds)) {
+    return [];
+  }
+  return meta.vaultIds.filter((id): id is string => typeof id === 'string');
 }
 
 /**
@@ -96,11 +133,14 @@ function pickFields(item: RawRecord, fields: readonly string[]): RawRecord {
 }
 
 /**
- * Turns a stored timestamp into an ISO-8601 string. Epoch milliseconds are converted, because the API would read a
- * bare number as seconds; anything else that is not a string is dropped, and the API then refuses the upload because every record needs a
+ * Turns a stored timestamp into an ISO-8601 string. Epoch milliseconds are converted, whether stored as a number or as
+ * the digits of one, because the API would read a bare number as seconds; anything else that is not a string is dropped, and the API then refuses the upload because every record needs a
  * creation time.
  */
 function toIsoTimestamp(value: unknown): string | undefined {
+  if (typeof value === 'string' && EPOCH_MILLISECONDS.test(value)) {
+    return toIsoTimestamp(Number(value));
+  }
   if (typeof value === 'string') {
     return value;
   }

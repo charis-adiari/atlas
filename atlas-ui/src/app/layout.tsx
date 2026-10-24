@@ -1,21 +1,37 @@
+import { Header } from '@/components/Header/Header';
+import { Sidebar } from '@/components/Sidebar/Sidebar';
+import 'material-symbols/rounded.css';
 import type { Metadata } from 'next';
-import { Manrope } from 'next/font/google';
+import { DM_Mono, Manrope } from 'next/font/google';
 import './globals.css';
+import './styles/inputs.css';
+import styles from './layout.module.css';
 
 const manrope = Manrope({
-  variable: '--font-sans',
+  variable: '--font-manrope',
+  subsets: ['latin']
+});
+
+const dmMono = DM_Mono({
+  weight: ['400'],
   subsets: ['latin']
 });
 
 export const metadata: Metadata = {
   title: 'Atlas',
-  description: 'A collaborative whiteboard and Markdown workspace'
+  description: 'Collaborative Whiteboard & Markdown'
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={manrope.variable}>
-      <body>{children}</body>
+    <html lang="en" className={`${manrope.variable} ${dmMono}`}>
+      <body className={styles.body}>
+        <Sidebar />
+        <div className={styles.content}>
+          <Header />
+          <main className={styles.main}>{children}</main>
+        </div>
+      </body>
     </html>
   );
 }

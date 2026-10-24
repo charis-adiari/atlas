@@ -10,7 +10,7 @@
   margin: 0 auto 20px;
   border-radius: 16px;
   background: #241a45;
-  color: var(--accent-link);
+  color: var(--primary-link);
 }
 
 .title {
@@ -35,7 +35,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent-link);
+  color: var(--primary-link);
   font: inherit;
   text-decoration: underline;
   cursor: pointer;

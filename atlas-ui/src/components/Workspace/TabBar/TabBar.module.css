@@ -1,0 +1,12 @@
+.tabBar {
+  align-items: center;
+  border-bottom: 1px solid var(--background-light-3);
+  display: flex;
+  padding: 0 var(--workspace-x-padding);
+  width: 100%;
+
+  .add {
+    margin-left: 0.625rem;
+    padding: 0;
+  }
+}

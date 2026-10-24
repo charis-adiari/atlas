@@ -37,7 +37,7 @@ Placeholders that are meant to be replaced:
 - Login: the server route exists (`/api/v1/auth/login`) but the API has no login endpoint yet, and there is no login screen.
 - Email verification: `src/lib/auth/verification/emailVerification.ts` is a replaceable provider. The default requires nothing, so signup is unchanged; plug in a provider with `setEmailVerificationProvider` and the "check your inbox" step appears.
 - The `/account` page and the log-out button are minimal stand-ins for the real account screens.
-- Local vault storage (see below) is being built by another team member.
+- Local vault storage keeps only vaults so far (see below).
 
 ## Configuration
 
@@ -52,9 +52,14 @@ In production serve the app over HTTPS only. It sends `Strict-Transport-Security
 
 ## Local vault data and migration
 
-After a successful signup the UI looks for vault data kept on the device. If there is some, it asks whether to migrate it. Nothing about local vaults is stored yet, so whatever persists them must use this contract:
+After a successful signup the UI looks for vault data kept on the device. If there is some, it asks whether to migrate it. The data comes from two places:
 
-- Key `atlas.local-vault-data` in `localStorage`, holding JSON with four flat lists: `vaults`, `folders`, `files` and `backlinks`. The fields are those of the API's migration payload (`src/types/migration.ts`). Ids are UUIDs, and timestamps are ISO-8601 strings (epoch milliseconds are converted).
+- The local vault store (`src/lib/storage`): an index under `atlas:meta` in `localStorage` (its `vaultIds`) and one entry per vault under `atlas:vaults:<id>`. Each vault's id, name and creation time are uploaded. A vault without a name cannot be uploaded and is left out. The store does not keep folders, files or backlinks yet, so for now only vaults are migrated from here.
+- Key `atlas.local-vault-data` in `localStorage`, holding JSON with four flat lists: `vaults`, `folders`, `files` and `backlinks`. The fields are those of the API's migration payload (`src/types/migration.ts`). Nothing writes it yet. It is the contract to use for folders, files and backlinks until the store keeps them, and `src/lib/migration/local/localVaultData.ts` is the one file to change then. If both name the same vault, this key wins.
+
+Rules for both:
+
+- Ids are UUIDs. Timestamps are ISO-8601 strings, and epoch milliseconds, as a number or as digits in a string, are converted. Every record needs a creation time, because the API refuses an upload without one.
 - Only the fields the API knows are uploaded; anything else stored alongside them is ignored.
 - The upload is one all-or-nothing request to `POST /api/v1/vaults/migrate`. It is tried up to 3 times, pausing 1s and then 2s, when the server cannot be reached or has a problem. After that the user can retry or continue without migrating.
 - Local data is never deleted. Once the API confirms the upload, the migrated vault ids are recorded under `atlas.local-vault-data.migrated`, so those vaults are not offered again. Vaults created later are still offered.

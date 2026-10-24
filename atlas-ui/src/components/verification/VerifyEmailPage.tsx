@@ -30,7 +30,7 @@ export function VerifyEmailPage() {
   const { title, message } = TEXT[status];
 
   return (
-    <main className={styles.main}>
+    <div className={styles.main}>
       <section className={styles.card} aria-live="polite">
         <span className={status === 'failed' ? styles.markFailed : styles.mark}>
           <Icon name={status === 'failed' ? 'alert' : 'check'} size={26} />
@@ -43,6 +43,6 @@ export function VerifyEmailPage() {
           </Link>
         )}
       </section>
-    </main>
+    </div>
   );
 }

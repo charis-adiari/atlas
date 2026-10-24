@@ -3,6 +3,8 @@ import type { MigrationRequest } from '@/types/migration';
 import {
   LOCAL_VAULT_DATA_KEY,
   MIGRATION_RECORD_KEY,
+  STORE_META_KEY,
+  STORE_VAULT_KEY_PREFIX,
   markVaultDataMigrated,
   readUnmigratedVaultData
 } from './localVaultData';
@@ -49,6 +51,17 @@ const DATA: MigrationRequest = {
 
 function store(value: unknown): void {
   window.localStorage.setItem(LOCAL_VAULT_DATA_KEY, JSON.stringify(value));
+}
+
+function storeVault(id: string, entry: unknown): void {
+  window.localStorage.setItem(`${STORE_VAULT_KEY_PREFIX}${id}`, JSON.stringify(entry));
+}
+
+function storeIndex(vaultIds: unknown): void {
+  window.localStorage.setItem(
+    STORE_META_KEY,
+    JSON.stringify({ vaultIds, lastOpenVaultId: null, lastVisit: '2026-01-01T00:00:00.000Z' })
+  );
 }
 
 afterEach(() => {
@@ -179,6 +192,144 @@ describe('readUnmigratedVaultData', () => {
 
     // Assert
     expect(data).toBeNull();
+  });
+});
+
+describe('readUnmigratedVaultData with the local vault store', () => {
+  it('offers the vaults of the store, with the fields the API knows', () => {
+    // Arrange
+    storeIndex([VAULT_A, VAULT_B]);
+    storeVault(VAULT_A, {
+      id: VAULT_A,
+      name: 'Personal',
+      createdAt: '2026-01-01T09:00:00.000Z',
+      tree: {}
+    });
+    storeVault(VAULT_B, { id: VAULT_B, name: 'Work', createdAt: '2026-02-01T09:00:00.000Z' });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(data).toEqual({
+      vaults: [
+        { id: VAULT_A, name: 'Personal', createdAt: '2026-01-01T09:00:00.000Z' },
+        { id: VAULT_B, name: 'Work', createdAt: '2026-02-01T09:00:00.000Z' }
+      ],
+      folders: [],
+      files: [],
+      backlinks: []
+    });
+  });
+
+  it('turns a creation time kept as the digits of epoch milliseconds into ISO-8601', () => {
+    // Arrange
+    storeIndex([VAULT_A]);
+    storeVault(VAULT_A, { id: VAULT_A, name: 'Personal', createdAt: '1767225600000' });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(data?.vaults[0].createdAt).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('gives a vault whose creation time is missing the current time', () => {
+    // Arrange
+    storeIndex([VAULT_A]);
+    storeVault(VAULT_A, { id: VAULT_A, name: 'Personal' });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(Number.isNaN(Date.parse(data?.vaults[0].createdAt ?? ''))).toBe(false);
+  });
+
+  it('leaves out vaults that cannot be uploaded: no entry, damaged entry or no name', () => {
+    // Arrange
+    storeIndex([
+      VAULT_A,
+      VAULT_B,
+      'c0000000-0000-4000-8000-000000000003',
+      'd0000000-0000-4000-8000-000000000004'
+    ]);
+    window.localStorage.setItem(`${STORE_VAULT_KEY_PREFIX}${VAULT_A}`, '{not json');
+    storeVault(VAULT_B, { id: VAULT_B, name: '   ' });
+    storeVault('c0000000-0000-4000-8000-000000000003', {
+      id: 'c0000000-0000-4000-8000-000000000003'
+    });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(data).toBeNull();
+  });
+
+  it.each([['{not json'], [JSON.stringify({ vaultIds: 'nope' })], [JSON.stringify([])]])(
+    'treats a damaged index (%s) as having no vaults',
+    (index) => {
+      // Arrange
+      window.localStorage.setItem(STORE_META_KEY, index);
+      storeVault(VAULT_A, { id: VAULT_A, name: 'Personal' });
+
+      // Act
+      const data = readUnmigratedVaultData();
+
+      // Assert
+      expect(data).toBeNull();
+    }
+  );
+
+  it('adds store vaults to the full data without repeating a vault both have', () => {
+    // Arrange
+    store({ ...DATA, vaults: [DATA.vaults[0]] });
+    storeIndex([VAULT_A, VAULT_B]);
+    storeVault(VAULT_A, {
+      id: VAULT_A,
+      name: 'Renamed in the store',
+      createdAt: '2026-05-01T00:00:00Z'
+    });
+    storeVault(VAULT_B, { id: VAULT_B, name: 'Work ideas', createdAt: '2026-01-01T09:00:00Z' });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(data?.vaults.map((vault) => vault.name)).toEqual(['Personal', 'Work ideas']);
+    expect(data?.files).toHaveLength(2);
+  });
+
+  it('still reads the store when the full data is damaged', () => {
+    // Arrange
+    window.localStorage.setItem(LOCAL_VAULT_DATA_KEY, '{not json');
+    storeIndex([VAULT_A]);
+    storeVault(VAULT_A, { id: VAULT_A, name: 'Personal', createdAt: '2026-01-01T09:00:00.000Z' });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(data?.vaults).toHaveLength(1);
+  });
+
+  it('stops offering a store vault once it is recorded as migrated', () => {
+    // Arrange
+    storeIndex([VAULT_A, VAULT_B]);
+    storeVault(VAULT_A, { id: VAULT_A, name: 'Personal', createdAt: '2026-01-01T09:00:00.000Z' });
+    storeVault(VAULT_B, { id: VAULT_B, name: 'Work', createdAt: '2026-01-01T09:00:00.000Z' });
+    const offered = readUnmigratedVaultData();
+    markVaultDataMigrated('user-1', {
+      ...(offered as MigrationRequest),
+      vaults: [offered!.vaults[0]]
+    });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(data?.vaults.map((vault) => vault.id)).toEqual([VAULT_B]);
   });
 });
 

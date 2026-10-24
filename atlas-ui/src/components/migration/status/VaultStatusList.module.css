@@ -44,7 +44,7 @@
   width: 18px;
   height: 18px;
   border: 2px solid var(--border-strong);
-  border-top-color: var(--accent-link);
+  border-top-color: var(--primary-link);
   border-radius: 50%;
   animation: spin 900ms linear infinite;
 }

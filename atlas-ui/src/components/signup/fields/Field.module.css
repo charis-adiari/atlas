@@ -31,7 +31,7 @@
 }
 
 .input:focus {
-  border-color: var(--accent);
+  border-color: var(--primary);
   outline: none;
 }
 

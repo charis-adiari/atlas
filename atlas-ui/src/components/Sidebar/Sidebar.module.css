@@ -1,0 +1,50 @@
+.sidebar {
+  background: var(--background-light);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  justify-content: space-between;
+  min-width: 16rem;
+  padding: 0 1rem 0.625rem 1rem;
+  position: relative;
+  width: 20%;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  height: 3.75rem;
+  justify-content: space-between;
+
+  .logo {
+    width: 3.75rem;
+    height: 0.875rem;
+  }
+}
+
+.buttonRow {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.buttonFullWidth {
+  gap: 0.625rem;
+  justify-content: left;
+  width: 100%;
+}
+
+.keyboardShortcut {
+  background: var(--background-light-3);
+  border-radius: 0.125rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+  padding: 1px 0.3125rem;
+}

@@ -21,7 +21,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent-link);
+  color: var(--primary-link);
   font: inherit;
   text-decoration: underline;
   cursor: pointer;

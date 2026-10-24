@@ -1,16 +1,36 @@
-import { Header } from '@/components/header/Header';
-import styles from './page.module.css';
+'use client';
 
-/**
- * Renders the home page: the header above the workspace area.
- */
+import { Workspace } from '@/components/Workspace/Workspace';
+import { getStore } from '@/lib/storage';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+
 export default function Home() {
-  return (
-    <>
-      <Header />
-      <main className={styles.main}>
-        <p className={styles.placeholder}>Your workspace will appear here.</p>
-      </main>
-    </>
-  );
+  const router = useRouter();
+  const [showEmpty, setShowEmpty] = useState(false);
+  const ran = useRef(false);
+
+  useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+
+    const redirect = async () => {
+      const store = getStore();
+      const lastLogIn = await store.getLastVisit();
+
+      if (!lastLogIn) {
+        const vault = await store.createVault();
+        const now = new Date(Date.now());
+        await store.setLastLogIn(now.toISOString());
+        router.replace(`/vault/${vault.id}`);
+        return;
+      }
+
+      setShowEmpty(true);
+    };
+
+    redirect();
+  }, [router]);
+
+  return showEmpty ? <Workspace /> : null;
 }
