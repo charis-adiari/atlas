@@ -1,13 +1,11 @@
 import { ApiError } from '@/lib/api/ApiError';
-import { NETWORK_ERROR_STATUS, UNKNOWN_ERROR_MESSAGE } from '@/lib/api/apiClient';
-import { migrateVaults } from '@/lib/api/migrationApi';
-import type { AuthSession } from '@/lib/auth/session/authSessionStore';
+import { NETWORK_ERROR_STATUS, UNKNOWN_ERROR_MESSAGE } from '@/lib/api/httpClient';
+import { isAlreadyMigrated, migrateVaults } from '@/lib/api/migrationApi';
 import type { MigrationRequest } from '@/types/migration';
 
 export const MAX_MIGRATION_ATTEMPTS = 3;
 export const RETRY_BASE_DELAY_MS = 1000;
 
-const CONFLICT_STATUS = 409;
 const REQUEST_TIMEOUT_STATUS = 408;
 const TOO_MANY_REQUESTS_STATUS = 429;
 const FIRST_SERVER_ERROR_STATUS = 500;
@@ -52,13 +50,11 @@ export interface MigrationRunOptions {
  * attempt a conflict is a real failure.
  *
  * @param data the local payload
- * @param credentials the access token of the signed-in user
  * @param options whether an earlier run left an upload unconfirmed, a callback for the attempt number, and the
  * function that pauses between attempts
  */
 export async function migrateWithRetry(
   data: MigrationRequest,
-  credentials: Pick<AuthSession, 'accessToken' | 'tokenType'>,
   options: MigrationRunOptions
 ): Promise<MigrationOutcome> {
   const wait = options.wait ?? pause;
@@ -68,11 +64,11 @@ export async function migrateWithRetry(
 
   for (;;) {
     try {
-      await migrateVaults(data, credentials);
+      await migrateVaults(data);
       return { status: 'success', isRecovered: false };
     } catch (caught) {
       const error = toApiError(caught);
-      if (error.statusCode === CONFLICT_STATUS && hasUnconfirmedUpload) {
+      if (isAlreadyMigrated(error) && hasUnconfirmedUpload) {
         return { status: 'success', isRecovered: true };
       }
 

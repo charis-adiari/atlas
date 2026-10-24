@@ -23,19 +23,22 @@ export function createLocalVaultData(): MigrationRequest {
         id: 'f0000000-0000-4000-8000-000000000001',
         vaultId: PERSONAL_VAULT_ID,
         parentFolderId: null,
-        name: 'Journal'
+        name: 'Journal',
+        createdAt: '2026-01-01T09:00:00Z'
       },
       {
         id: 'f0000000-0000-4000-8000-000000000002',
         vaultId: PERSONAL_VAULT_ID,
         parentFolderId: 'f0000000-0000-4000-8000-000000000001',
-        name: '2026'
+        name: '2026',
+        createdAt: '2026-01-01T09:00:00Z'
       },
       {
         id: 'f0000000-0000-4000-8000-000000000003',
         vaultId: WORK_VAULT_ID,
         parentFolderId: null,
-        name: 'Projects'
+        name: 'Projects',
+        createdAt: '2026-01-01T09:00:00Z'
       }
     ],
     files: [
@@ -45,7 +48,8 @@ export function createLocalVaultData(): MigrationRequest {
         folderId: 'f0000000-0000-4000-8000-000000000002',
         type: 'note',
         name: 'Weekly review',
-        content: '# Weekly review'
+        content: '# Weekly review',
+        createdAt: '2026-01-01T09:00:00Z'
       },
       {
         id: 'd0000000-0000-4000-8000-000000000002',
@@ -53,7 +57,8 @@ export function createLocalVaultData(): MigrationRequest {
         folderId: null,
         type: 'canvas',
         name: 'Mind map',
-        content: '{"nodes":[]}'
+        content: '{"nodes":[]}',
+        createdAt: '2026-01-01T09:00:00Z'
       },
       {
         id: 'd0000000-0000-4000-8000-000000000003',
@@ -61,7 +66,8 @@ export function createLocalVaultData(): MigrationRequest {
         folderId: 'f0000000-0000-4000-8000-000000000003',
         type: 'note',
         name: 'Roadmap',
-        content: '# Roadmap'
+        content: '# Roadmap',
+        createdAt: '2026-01-01T09:00:00Z'
       },
       {
         id: 'd0000000-0000-4000-8000-000000000004',
@@ -69,7 +75,8 @@ export function createLocalVaultData(): MigrationRequest {
         folderId: null,
         type: 'note',
         name: 'Ideas',
-        content: ''
+        content: '',
+        createdAt: '2026-01-01T09:00:00Z'
       },
       {
         id: 'd0000000-0000-4000-8000-000000000005',
@@ -77,7 +84,8 @@ export function createLocalVaultData(): MigrationRequest {
         folderId: null,
         type: 'note',
         name: 'Books',
-        content: '- Dune'
+        content: '- Dune',
+        createdAt: '2026-01-01T09:00:00Z'
       },
       {
         id: 'd0000000-0000-4000-8000-000000000006',
@@ -85,7 +93,8 @@ export function createLocalVaultData(): MigrationRequest {
         folderId: null,
         type: 'canvas',
         name: 'Reading map',
-        content: '{"nodes":[]}'
+        content: '{"nodes":[]}',
+        createdAt: '2026-01-01T09:00:00Z'
       }
     ],
     backlinks: [

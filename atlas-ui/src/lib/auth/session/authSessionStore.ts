@@ -1,174 +1,148 @@
-import type { SignupResponse, UserDto } from '@/types/auth';
+import type { UserDto } from '@/types/auth';
 
-export const SESSION_STORAGE_KEY = 'atlas.auth.session';
-
-const MILLIS_PER_SECOND = 1000;
-const listeners = new Set<() => void>();
-
-let storedValue: string | null | undefined;
-let parsedValue: AuthSession | null = null;
-let parsedSource: string | null = null;
+export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
+export type SessionEndReason = 'expired' | 'signed-out';
 
 /**
- * Represents a signed-in session: the access token and the account it belongs to.
+ * Represents who is signed in and until when. It holds no token: the access token lives in an HttpOnly cookie that
+ * scripts cannot read.
  */
 export interface AuthSession {
-  accessToken: string;
-  tokenType: string;
-  expiresAt: number;
   user: UserDto;
+  expiresAt: number;
 }
 
 /**
- * Gets the current session, or null when the user is anonymous or the token has expired. The same object is
- * returned until the stored session changes, so it can back useSyncExternalStore.
+ * Represents what the app knows about the visitor: not yet checked, signed in, or anonymous, and why a session ended.
  */
-export function getSession(): AuthSession | null {
-  const value = readValue();
-
-  if (value !== parsedSource) {
-    parsedSource = value;
-    parsedValue = parseSession(value);
-  }
-
-  return parsedValue !== null && parsedValue.expiresAt > Date.now() ? parsedValue : null;
+export interface AuthState {
+  status: AuthStatus;
+  session: AuthSession | null;
+  endReason: SessionEndReason | null;
 }
 
+const INITIAL_STATE: AuthState = { status: 'loading', session: null, endReason: null };
+const MAX_TIMER_MS = 2_147_483_647;
+const listeners = new Set<() => void>();
+
+let state: AuthState = INITIAL_STATE;
+let expiryTimer: ReturnType<typeof setTimeout> | null = null;
+let isRestoreInProgress = false;
+
 /**
- * Gets the session during server rendering, where nobody is signed in.
+ * Gets the current auth state. The same object is returned until it changes, so it can back useSyncExternalStore.
  */
-export function getServerSession(): AuthSession | null {
-  return null;
+export function getAuthState(): AuthState {
+  return state;
 }
 
 /**
- * Registers a callback that runs whenever the session changes, including from another tab.
+ * Gets the auth state during server rendering, where nothing has been checked yet.
+ */
+export function getServerAuthState(): AuthState {
+  return INITIAL_STATE;
+}
+
+/**
+ * Registers a callback that runs whenever the auth state changes.
  *
  * @returns a function that removes the callback
  */
-export function subscribeToSession(listener: () => void): () => void {
+export function subscribeToAuth(listener: () => void): () => void {
   listeners.add(listener);
-  window.addEventListener('storage', handleStorageEvent);
-
   return () => {
     listeners.delete(listener);
-    if (listeners.size === 0) {
-      window.removeEventListener('storage', handleStorageEvent);
-    }
   };
 }
 
 /**
- * Keeps the access token from a signup response and marks the user as signed in. The session stays in memory even
- * if the browser refuses to persist it.
+ * Claims the job of finding out whether the browser already has a session, so only one caller does it. It is granted
+ * once, while nothing has been checked yet, and the claim ends as soon as the state changes.
+ *
+ * @returns true if the caller should go and check
  */
-export function saveSession(response: SignupResponse): void {
-  const session: AuthSession = {
-    accessToken: response.accessToken,
-    tokenType: response.tokenType,
-    expiresAt: Date.now() + response.expiresIn * MILLIS_PER_SECOND,
-    user: response.user
-  };
-
-  writeValue(JSON.stringify(session));
-}
-
-/**
- * Forgets the session, leaving the user anonymous. Only the session is removed, never local content.
- */
-export function clearSession(): void {
-  writeValue(null);
-}
-
-/**
- * Reads the stored value once, then serves it from memory.
- */
-function readValue(): string | null {
-  if (storedValue === undefined) {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-    storedValue = readFromBrowserStorage();
+export function claimSessionRestore(): boolean {
+  if (isRestoreInProgress || state.status !== 'loading') {
+    return false;
   }
-  return storedValue;
+  isRestoreInProgress = true;
+  return true;
 }
 
 /**
- * Updates the in-memory value and the browser storage, then notifies subscribers.
+ * Marks the user as signed in until the given moment. When that moment passes, the session ends by itself, which is what
+ * turns an expired token into a signed-out page without waiting for a request to fail.
+ *
+ * @param user who signed in
+ * @param expiresAt when the access token stops being valid, in epoch milliseconds
  */
-function writeValue(value: string | null): void {
-  storedValue = value;
-  writeToBrowserStorage(value);
-  notifyListeners();
-}
-
-/**
- * Reads the raw session from localStorage, treating an unavailable storage as empty.
- */
-function readFromBrowserStorage(): string | null {
-  try {
-    return window.localStorage.getItem(SESSION_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Writes or removes the raw session in localStorage, ignoring a storage that is unavailable or full.
- */
-function writeToBrowserStorage(value: string | null): void {
-  try {
-    if (value === null) {
-      window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    } else {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, value);
-    }
-  } catch {
+export function startSession(user: UserDto, expiresAt: number): void {
+  clearExpiryTimer();
+  isRestoreInProgress = false;
+  if (expiresAt <= Date.now()) {
+    endSession('expired');
     return;
   }
+  setState({ status: 'authenticated', session: { user, expiresAt }, endReason: null });
+  scheduleExpiry(expiresAt);
 }
 
 /**
- * Picks up a session change made in another tab.
+ * Leaves the user anonymous, remembering why the session ended so the app can tell them.
  */
-function handleStorageEvent(event: StorageEvent): void {
-  if (event.key === SESSION_STORAGE_KEY || event.key === null) {
-    storedValue = readFromBrowserStorage();
-    notifyListeners();
+export function endSession(reason: SessionEndReason | null): void {
+  clearExpiryTimer();
+  isRestoreInProgress = false;
+  setState({ status: 'anonymous', session: null, endReason: reason });
+}
+
+/**
+ * Returns the store to its initial state, before anything has been checked.
+ */
+export function resetAuthState(): void {
+  clearExpiryTimer();
+  isRestoreInProgress = false;
+  setState(INITIAL_STATE);
+}
+
+/**
+ * Replaces the state and tells subscribers, unless nothing changed.
+ */
+function setState(next: AuthState): void {
+  if (
+    next.status === state.status &&
+    next.endReason === state.endReason &&
+    next.session?.user.id === state.session?.user.id &&
+    next.session?.expiresAt === state.session?.expiresAt
+  ) {
+    return;
   }
-}
-
-/**
- * Tells every subscriber that the session may have changed.
- */
-function notifyListeners(): void {
+  state = next;
   listeners.forEach((listener) => listener());
 }
 
 /**
- * Parses a stored session, returning null for anything that is not a complete session.
+ * Ends the session when its expiry arrives, checking again if the timer fired early because of its length limit.
  */
-function parseSession(value: string | null): AuthSession | null {
-  if (value === null) {
-    return null;
-  }
-  try {
-    const candidate = JSON.parse(value) as Partial<AuthSession> | null;
-    return isCompleteSession(candidate) ? candidate : null;
-  } catch {
-    return null;
-  }
+function scheduleExpiry(expiresAt: number): void {
+  expiryTimer = setTimeout(
+    () => {
+      if (Date.now() >= expiresAt) {
+        endSession('expired');
+      } else {
+        scheduleExpiry(expiresAt);
+      }
+    },
+    Math.min(expiresAt - Date.now(), MAX_TIMER_MS)
+  );
 }
 
 /**
- * Checks that a parsed value has every field of a session.
+ * Cancels a pending expiry timer.
  */
-function isCompleteSession(candidate: Partial<AuthSession> | null): candidate is AuthSession {
-  return (
-    typeof candidate?.accessToken === 'string' &&
-    typeof candidate.tokenType === 'string' &&
-    typeof candidate.expiresAt === 'number' &&
-    typeof candidate.user?.id === 'string' &&
-    typeof candidate.user.email === 'string'
-  );
+function clearExpiryTimer(): void {
+  if (expiryTimer !== null) {
+    clearTimeout(expiryTimer);
+    expiryTimer = null;
+  }
 }

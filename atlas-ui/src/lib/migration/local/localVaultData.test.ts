@@ -13,9 +13,17 @@ const VAULT_B = 'b0000000-0000-4000-8000-000000000002';
 const DATA: MigrationRequest = {
   vaults: [
     { id: VAULT_A, name: 'Personal', createdAt: '2026-01-01T00:00:00Z' },
-    { id: VAULT_B, name: 'Work ideas' }
+    { id: VAULT_B, name: 'Work ideas', createdAt: '2026-01-01T09:00:00Z' }
   ],
-  folders: [{ id: 'f1', vaultId: VAULT_A, parentFolderId: null, name: 'Inbox' }],
+  folders: [
+    {
+      id: 'f1',
+      vaultId: VAULT_A,
+      parentFolderId: null,
+      name: 'Inbox',
+      createdAt: '2026-01-01T09:00:00Z'
+    }
+  ],
   files: [
     {
       id: 'n1',
@@ -23,9 +31,18 @@ const DATA: MigrationRequest = {
       folderId: 'f1',
       type: 'note',
       name: 'Weekly review',
-      content: '# Hi'
+      content: '# Hi',
+      createdAt: '2026-01-01T09:00:00Z'
     },
-    { id: 'n2', vaultId: VAULT_B, folderId: null, type: 'canvas', name: 'Mind map', content: '{}' }
+    {
+      id: 'n2',
+      vaultId: VAULT_B,
+      folderId: null,
+      type: 'canvas',
+      name: 'Mind map',
+      content: '{}',
+      createdAt: '2026-01-01T09:00:00Z'
+    }
   ],
   backlinks: [{ sourceFileId: 'n1', targetFileId: 'n1' }]
 };
@@ -64,14 +81,14 @@ describe('readUnmigratedVaultData', () => {
 
   it('counts a missing list as empty', () => {
     // Arrange
-    store({ vaults: [{ id: VAULT_A, name: 'Personal' }] });
+    store({ vaults: [{ id: VAULT_A, name: 'Personal', createdAt: '2026-01-01T09:00:00Z' }] });
 
     // Act
     const data = readUnmigratedVaultData();
 
     // Assert
     expect(data).toEqual({
-      vaults: [{ id: VAULT_A, name: 'Personal' }],
+      vaults: [{ id: VAULT_A, name: 'Personal', createdAt: '2026-01-01T09:00:00Z' }],
       folders: [],
       files: [],
       backlinks: []
@@ -111,27 +128,15 @@ describe('readUnmigratedVaultData', () => {
   it('keeps only the fields the API knows', () => {
     // Arrange
     store({
-      vaults: [{ id: VAULT_A, name: 'Personal', accessToken: 'secret', uiState: { open: true } }]
-    });
-
-    // Act
-    const data = readUnmigratedVaultData();
-
-    // Assert
-    expect(data?.vaults).toEqual([{ id: VAULT_A, name: 'Personal' }]);
-  });
-
-  it('turns epoch milliseconds into ISO-8601 and drops timestamps it cannot read', () => {
-    // Arrange
-    store({
       vaults: [
         {
           id: VAULT_A,
-          name: 'A',
-          createdAt: 1_767_225_600_000,
-          lastUpdatedAt: '2026-01-02T00:00:00Z'
-        },
-        { id: VAULT_B, name: 'B', createdAt: Number.NaN, lastUpdatedAt: { not: 'a date' } }
+          name: 'Personal',
+          createdAt: '2026-01-01T09:00:00Z',
+          lastUpdatedAt: '2026-01-02T09:00:00Z',
+          accessToken: 'secret',
+          uiState: { open: true }
+        }
       ]
     });
 
@@ -140,12 +145,25 @@ describe('readUnmigratedVaultData', () => {
 
     // Assert
     expect(data?.vaults).toEqual([
-      {
-        id: VAULT_A,
-        name: 'A',
-        createdAt: '2026-01-01T00:00:00.000Z',
-        lastUpdatedAt: '2026-01-02T00:00:00Z'
-      },
+      { id: VAULT_A, name: 'Personal', createdAt: '2026-01-01T09:00:00Z' }
+    ]);
+  });
+
+  it('turns epoch milliseconds into ISO-8601 and drops a creation time it cannot read', () => {
+    // Arrange
+    store({
+      vaults: [
+        { id: VAULT_A, name: 'A', createdAt: 1_767_225_600_000 },
+        { id: VAULT_B, name: 'B', createdAt: Number.NaN }
+      ]
+    });
+
+    // Act
+    const data = readUnmigratedVaultData();
+
+    // Assert
+    expect(data?.vaults).toEqual([
+      { id: VAULT_A, name: 'A', createdAt: '2026-01-01T00:00:00.000Z' },
       { id: VAULT_B, name: 'B' }
     ]);
   });
@@ -209,16 +227,38 @@ describe('markVaultDataMigrated', () => {
     const newVault = 'c0000000-0000-4000-8000-000000000003';
     store({
       ...DATA,
-      vaults: [...DATA.vaults, { id: newVault, name: 'Reading list' }],
-      files: [...DATA.files, { id: 'n3', vaultId: newVault, type: 'note', name: 'Books' }]
+      vaults: [
+        ...DATA.vaults,
+        { id: newVault, name: 'Reading list', createdAt: '2026-01-01T09:00:00Z' }
+      ],
+      files: [
+        ...DATA.files,
+        {
+          id: 'n3',
+          vaultId: newVault,
+          type: 'note',
+          name: 'Books',
+          createdAt: '2026-01-01T09:00:00Z'
+        }
+      ]
     });
 
     // Act
     const data = readUnmigratedVaultData();
 
     // Assert
-    expect(data?.vaults).toEqual([{ id: newVault, name: 'Reading list' }]);
-    expect(data?.files).toEqual([{ id: 'n3', vaultId: newVault, type: 'note', name: 'Books' }]);
+    expect(data?.vaults).toEqual([
+      { id: newVault, name: 'Reading list', createdAt: '2026-01-01T09:00:00Z' }
+    ]);
+    expect(data?.files).toEqual([
+      {
+        id: 'n3',
+        vaultId: newVault,
+        type: 'note',
+        name: 'Books',
+        createdAt: '2026-01-01T09:00:00Z'
+      }
+    ]);
     expect(data?.folders).toEqual([]);
     expect(data?.backlinks).toEqual([]);
   });

@@ -15,11 +15,28 @@ export interface SignupRequest {
 }
 
 /**
- * Represents the body of a successful signup response. Mirrors the API's SignupResponse.
+ * Represents the body of a login request.
+ */
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+/**
+ * Represents what the browser is told when a session starts. The access token itself never reaches the browser: the
+ * server keeps it in an HttpOnly cookie, so the page only learns who signed in and for how long.
  */
 export interface SignupResponse {
   user: UserDto;
-  accessToken: string;
-  tokenType: string;
   expiresIn: number;
+}
+
+export type LoginResponse = SignupResponse;
+
+/**
+ * Represents the current session as the server describes it. The expiry is a moment in epoch milliseconds.
+ */
+export interface SessionInfo {
+  user: UserDto;
+  expiresAt: number;
 }

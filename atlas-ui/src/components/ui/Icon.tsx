@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 export type IconName =
-  'alert' | 'check' | 'close' | 'eye' | 'eyeOff' | 'minus' | 'shield' | 'warning';
+  'alert' | 'check' | 'close' | 'eye' | 'eyeOff' | 'mail' | 'minus' | 'shield' | 'warning';
 
 interface IconProps {
   name: IconName;
@@ -30,6 +30,12 @@ const ICON_SHAPES: Record<IconName, ReactNode> = {
       <path d="M10.7 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.2 3.2M6.6 6.6A17.7 17.7 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6" />
       <path d="M14.1 14.1A3 3 0 0 1 9.9 9.9" />
       <path d="m2 2 20 20" />
+    </>
+  ),
+  mail: (
+    <>
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
     </>
   ),
   minus: (

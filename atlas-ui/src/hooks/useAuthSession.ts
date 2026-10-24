@@ -1,24 +1,34 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import {
-  getServerSession,
-  getSession,
-  subscribeToSession,
-  type AuthSession
+  getAuthState,
+  getServerAuthState,
+  subscribeToAuth,
+  type AuthState
 } from '@/lib/auth/session/authSessionStore';
+import { ensureSessionRestored } from '@/lib/auth/session/sessionService';
 
 /**
- * Represents who is using the app: a signed-in user with a session, or an anonymous one.
+ * Represents who is using the app and whether that has been worked out yet.
  */
-export interface UseAuthSessionResult {
-  session: AuthSession | null;
+export interface UseAuthSessionResult extends AuthState {
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 /**
- * Reads the current session and re-renders when it changes.
+ * Reads who is signed in and re-renders when that changes. The first use also asks the server whether the browser has
+ * a valid session cookie.
  */
 export function useAuthSession(): UseAuthSessionResult {
-  const session = useSyncExternalStore(subscribeToSession, getSession, getServerSession);
+  const state = useSyncExternalStore(subscribeToAuth, getAuthState, getServerAuthState);
 
-  return { session, isAuthenticated: session !== null };
+  useEffect(() => {
+    void ensureSessionRestored();
+  }, []);
+
+  return {
+    ...state,
+    isAuthenticated: state.status === 'authenticated',
+    isLoading: state.status === 'loading'
+  };
 }

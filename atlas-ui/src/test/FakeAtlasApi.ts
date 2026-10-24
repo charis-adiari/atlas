@@ -1,13 +1,16 @@
-import { vi } from 'vitest';
-import type { SignupRequest, SignupResponse } from '@/types/auth';
+import { ALREADY_MIGRATED_MESSAGE } from '@/lib/api/migrationApi';
+import type { SignupRequest } from '@/types/auth';
 import type { MigrationRequest } from '@/types/migration';
+import { HttpMock, jsonReply, problemReply, type MockReply, type MockRequest } from './HttpMock';
 
-const SIGNUP_PATH = '/api/v1/auth/signup';
-const MIGRATE_PATH = '/api/v1/vaults/migrate';
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const PASSWORD_MAX_LENGTH = 72;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
-const TOKEN_PREFIX = 'fake-jwt.';
+const DEFAULT_SESSION_SECONDS = 3600;
+const MILLIS_PER_SECOND = 1000;
+
+export const ACCOUNT_REFUSED_DETAIL = 'The account could not be created with the details provided.';
+export const INVALID_LINK_DETAIL = 'The verification link is invalid or has expired.';
 
 export type MigrationFault = 'network-error' | 'server-error' | 'lost-response';
 
@@ -18,44 +21,69 @@ export interface FakeAccount {
   id: string;
   email: string;
   password: string;
+  isVerified: boolean;
 }
 
 /**
  * Represents a request the fake API received.
  */
 export interface RecordedRequest {
+  method: string;
   path: string;
-  authorization: string | null;
+  headers: Record<string, string>;
   body: unknown;
 }
 
 /**
- * Stands in for the Atlas API in tests. It follows the real API's rules for the endpoints the signup flow uses: the
- * same password rules, one account per normalised email, an access token that identifies the account, and a migration
- * that stores everything or nothing and refuses data whose ids already exist. Faults can be queued to simulate a
- * network that fails partway through.
+ * Stands in for the Atlas API as the browser sees it, that is, through this app's own server. It follows the real rules
+ * for the endpoints the signup flow uses: the same password rules, one account per normalised email, a session that the
+ * browser keeps in a cookie the page cannot read, and a migration that stores everything or nothing and refuses data whose
+ * ids already exist, answering with an empty body. Like the real API it emails a verification link at signup, refuses
+ * migrations from unverified accounts when asked to, and gives a duplicate email the same vague refusal as any other
+ * unusable details. Faults can be queued to simulate a network that fails partway through, and the session can be
+ * expired to simulate the cookie running out.
  */
 export class FakeAtlasApi {
   readonly requests: RecordedRequest[] = [];
+  readonly http = new HttpMock();
 
   private readonly accounts = new Map<string, FakeAccount>();
   private readonly vaultsByUser = new Map<string, MigrationRequest>();
   private readonly migrationFaults: MigrationFault[] = [];
   private readonly rejectedPasswords = new Set<string>();
-  private isNetworkDown = false;
+  private readonly verificationTokens = new Map<string, string>();
+  private isVerificationEnforced = false;
+  private sessionUserId: string | null = null;
+  private sessionSeconds = DEFAULT_SESSION_SECONDS;
+
+  constructor() {
+    this.http.handler.mockImplementation((request) => this.handle(request));
+  }
 
   /**
-   * Replaces the global fetch with this fake for the current test.
+   * Routes the shared HTTP client through this fake for the current test.
    */
   install(): void {
-    vi.stubGlobal('fetch', this.fetch);
+    this.http.install();
+  }
+
+  /**
+   * Restores the real transport.
+   */
+  uninstall(): void {
+    this.http.uninstall();
   }
 
   /**
    * Registers an account directly, as if the person had signed up earlier.
    */
   addAccount(email: string, password: string): FakeAccount {
-    const account = { id: crypto.randomUUID(), email: email.trim().toLowerCase(), password };
+    const account = {
+      id: crypto.randomUUID(),
+      email: email.trim().toLowerCase(),
+      password,
+      isVerified: false
+    };
     this.accounts.set(account.email, account);
     return account;
   }
@@ -65,6 +93,21 @@ export class FakeAtlasApi {
    */
   findAccount(email: string): FakeAccount | undefined {
     return this.accounts.get(email.trim().toLowerCase());
+  }
+
+  /**
+   * Makes migrations from accounts that have not verified their email address fail with a 403, as the real API does.
+   */
+  enforceVerification(): void {
+    this.isVerificationEnforced = true;
+  }
+
+  /**
+   * Gets the token in the most recent verification link emailed to an account, or undefined if none was sent.
+   */
+  getVerificationToken(email: string): string | undefined {
+    const userId = this.findAccount(email)?.id;
+    return [...this.verificationTokens].find(([, owner]) => owner === userId)?.[0];
   }
 
   /**
@@ -89,6 +132,34 @@ export class FakeAtlasApi {
   }
 
   /**
+   * Gives the browser a valid session cookie for an account, as if it had signed up or logged in earlier.
+   */
+  signInAs(account: FakeAccount): void {
+    this.sessionUserId = account.id;
+  }
+
+  /**
+   * Gets the id of the account the browser's session cookie belongs to, or null if there is no valid cookie.
+   */
+  getSessionUserId(): string | null {
+    return this.sessionUserId;
+  }
+
+  /**
+   * Sets how long the sessions the server starts from now on last, in seconds.
+   */
+  setSessionSeconds(seconds: number): void {
+    this.sessionSeconds = seconds;
+  }
+
+  /**
+   * Makes the browser's session cookie stop being valid, as when the token expires.
+   */
+  expireSession(): void {
+    this.sessionUserId = null;
+  }
+
+  /**
    * Makes the server refuse a password the client considers fine, as a stricter backend rule would.
    */
   rejectPassword(password: string): void {
@@ -106,55 +177,145 @@ export class FakeAtlasApi {
    * Cuts or restores the network for every request.
    */
   setNetworkDown(isDown: boolean): void {
-    this.isNetworkDown = isDown;
+    this.http.setNetworkDown(isDown);
   }
 
   /**
-   * Handles a request the way fetch would.
+   * Routes a request to the endpoint it is for.
    */
-  private readonly fetch = async (
-    input: RequestInfo | URL,
-    init?: RequestInit
-  ): Promise<Response> => {
-    const path = new URL(String(input), 'http://localhost').pathname;
-    const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
-    const authorization = new Headers(init?.headers).get('Authorization');
-    this.requests.push({ path, authorization, body });
+  private handle(request: MockRequest): MockReply {
+    this.requests.push({
+      method: request.method,
+      path: request.path,
+      headers: request.headers,
+      body: request.body
+    });
 
-    if (this.isNetworkDown) {
-      throw new TypeError('Failed to fetch');
+    if (request.path === '/auth/signup') {
+      return this.signup(request.body as SignupRequest);
     }
-    if (path === SIGNUP_PATH) {
-      return this.signup(body as SignupRequest);
+    if (request.path === '/auth/session') {
+      return this.session();
     }
-    if (path === MIGRATE_PATH) {
-      return this.migrate(authorization, body as MigrationRequest);
+    if (request.path === '/auth/verify-email') {
+      return this.verifyEmail((request.body as { token: string }).token);
     }
-    return problem(404, 'Not found');
-  };
+    if (request.path === '/auth/resend-verification') {
+      return this.resendVerification();
+    }
+    if (request.path === '/auth/verification-status') {
+      return this.verificationStatus();
+    }
+    if (request.path === '/auth/logout') {
+      this.sessionUserId = null;
+      return jsonReply(204);
+    }
+    if (request.path === '/vaults/migrate') {
+      return this.migrate(request.body as MigrationRequest);
+    }
+    return problemReply(404, 'Not found');
+  }
 
   /**
-   * Creates an account, or explains why it cannot.
+   * Creates an account and starts a session for it, or explains why it cannot.
    */
-  private signup(request: SignupRequest): Response {
+  private signup(request: SignupRequest): MockReply {
     const email = request.email.trim().toLowerCase();
     const errors = this.validateCredentials(email, request.password);
 
     if (Object.keys(errors).length > 0) {
-      return problem(400, 'The request is invalid.', errors);
+      return problemReply(400, 'The request is invalid.', errors);
     }
     if (this.accounts.has(email)) {
-      return problem(409, 'An account with this email already exists.');
+      return problemReply(400, ACCOUNT_REFUSED_DETAIL);
     }
 
     const account = this.addAccount(email, request.password);
-    const response: SignupResponse = {
+    this.sessionUserId = account.id;
+    this.issueVerificationToken(account.id);
+    return jsonReply(201, {
       user: { id: account.id, email: account.email },
-      accessToken: `${TOKEN_PREFIX}${account.id}`,
-      tokenType: 'Bearer',
-      expiresIn: 3600
-    };
-    return new Response(JSON.stringify(response), { status: 201 });
+      expiresIn: this.sessionSeconds
+    });
+  }
+
+  /**
+   * Replaces the verification token of an account, so only the latest link works.
+   */
+  private issueVerificationToken(userId: string): void {
+    for (const [token, owner] of this.verificationTokens) {
+      if (owner === userId) {
+        this.verificationTokens.delete(token);
+      }
+    }
+    this.verificationTokens.set(crypto.randomUUID(), userId);
+  }
+
+  /**
+   * Verifies the account a token was issued for and uses the token up.
+   */
+  private verifyEmail(token: string): MockReply {
+    const userId = this.verificationTokens.get(token);
+    const account = [...this.accounts.values()].find((candidate) => candidate.id === userId);
+
+    if (account === undefined) {
+      return problemReply(400, INVALID_LINK_DETAIL);
+    }
+    account.isVerified = true;
+    this.verificationTokens.delete(token);
+    return jsonReply(204);
+  }
+
+  /**
+   * Emails the signed-in account a new verification link, unless it is verified already.
+   */
+  private resendVerification(): MockReply {
+    const account = this.signedInAccount();
+
+    if (account === undefined) {
+      return problemReply(401, 'Authentication is required.');
+    }
+    if (account.isVerified) {
+      return problemReply(400, 'This email address is already verified.');
+    }
+    this.issueVerificationToken(account.id);
+    return jsonReply(204);
+  }
+
+  /**
+   * Reports whether the signed-in account has verified its email address.
+   */
+  private verificationStatus(): MockReply {
+    const account = this.signedInAccount();
+
+    if (account === undefined) {
+      return problemReply(401, 'Authentication is required.');
+    }
+    return jsonReply(200, { isVerified: account.isVerified });
+  }
+
+  /**
+   * Finds the account the browser's session cookie belongs to.
+   */
+  private signedInAccount(): FakeAccount | undefined {
+    return [...this.accounts.values()].find((candidate) => candidate.id === this.sessionUserId);
+  }
+
+  /**
+   * Reports the session the browser's cookie stands for, if it is still valid.
+   */
+  private session(): MockReply {
+    const account = [...this.accounts.values()].find(
+      (candidate) => candidate.id === this.sessionUserId
+    );
+
+    if (account === undefined) {
+      return problemReply(401, 'There is no active session.');
+    }
+    return jsonReply(200, {
+      user: { id: account.id, email: account.email },
+      expiresAt: Date.now() + this.sessionSeconds * MILLIS_PER_SECOND
+    });
   }
 
   /**
@@ -177,12 +338,15 @@ export class FakeAtlasApi {
   }
 
   /**
-   * Stores the payload for the account the token belongs to, applying any queued fault.
+   * Stores the payload for the account the session belongs to, applying any queued fault.
    */
-  private migrate(authorization: string | null, payload: MigrationRequest): Response {
-    const userId = this.userIdFrom(authorization);
-    if (userId === null) {
-      return new Response(null, { status: 401 });
+  private migrate(payload: MigrationRequest): MockReply {
+    if (this.sessionUserId === null) {
+      return problemReply(401, 'Authentication is required.');
+    }
+
+    if (this.isVerificationEnforced && this.signedInAccount()?.isVerified !== true) {
+      return problemReply(403, 'Verify your email address before migrating data.');
     }
 
     const fault = this.migrationFaults.shift();
@@ -190,20 +354,20 @@ export class FakeAtlasApi {
       throw new TypeError('Failed to fetch');
     }
     if (fault === 'server-error') {
-      return problem(503, 'An unexpected error occurred.');
+      return problemReply(503, 'An unexpected error occurred.');
     }
 
-    const response = this.store(userId, payload);
+    const reply = this.store(this.sessionUserId, payload);
     if (fault === 'lost-response') {
       throw new TypeError('Failed to fetch');
     }
-    return response;
+    return reply;
   }
 
   /**
    * Stores everything or nothing: data whose ids already exist anywhere is refused as a whole.
    */
-  private store(userId: string, payload: MigrationRequest): Response {
+  private store(userId: string, payload: MigrationRequest): MockReply {
     const knownIds = new Set(
       [...this.vaultsByUser.values()].flatMap((stored) =>
         [...stored.vaults, ...stored.folders, ...stored.files].map((record) => record.id)
@@ -212,37 +376,10 @@ export class FakeAtlasApi {
     const incoming = [...payload.vaults, ...payload.folders, ...payload.files];
 
     if (incoming.some((record) => knownIds.has(record.id))) {
-      return problem(409, 'Some of this data has already been migrated.');
+      return problemReply(400, ALREADY_MIGRATED_MESSAGE);
     }
 
     this.vaultsByUser.set(userId, structuredClone(payload));
-    return new Response(
-      JSON.stringify({
-        vaults: payload.vaults.length,
-        folders: payload.folders.length,
-        files: payload.files.length,
-        backlinks: payload.backlinks.length
-      }),
-      { status: 201 }
-    );
+    return jsonReply(201);
   }
-
-  /**
-   * Reads the account id out of a bearer token, or returns null if the token is not one this API issued.
-   */
-  private userIdFrom(authorization: string | null): string | null {
-    const token = authorization?.replace(/^Bearer /, '') ?? '';
-    return token.startsWith(TOKEN_PREFIX) ? token.slice(TOKEN_PREFIX.length) : null;
-  }
-}
-
-/**
- * Builds an error response in the API's problem-details format.
- */
-function problem(statusCode: number, detail: string, errors?: Record<string, string>): Response {
-  const body = { statusCode, title: 'Problem', detail, errors };
-  return new Response(JSON.stringify(body), {
-    status: statusCode,
-    headers: { 'Content-Type': 'application/problem+json' }
-  });
 }

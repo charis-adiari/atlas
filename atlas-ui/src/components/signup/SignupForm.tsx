@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { FormAlert } from '@/components/feedback/FormAlert';
 import { Button } from '@/components/ui/Button';
-import { useSignupForm } from '@/hooks/useSignupForm';
+import { useSignupForm } from '@/hooks/signup/useSignupForm';
 import type { SignupResponse } from '@/types/auth';
 import { EmailField } from './fields/EmailField';
 import { PasswordField } from './fields/PasswordField';

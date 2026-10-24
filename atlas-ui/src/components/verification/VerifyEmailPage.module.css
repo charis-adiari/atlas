@@ -1,0 +1,58 @@
+.main {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.mark,
+.markFailed {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 20px;
+  border-radius: 16px;
+}
+
+.mark {
+  background: var(--success-surface);
+  color: var(--success);
+}
+
+.markFailed {
+  background: var(--warning-surface);
+  color: var(--warning);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.text {
+  margin: 10px 0 22px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.link {
+  color: var(--accent-link);
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

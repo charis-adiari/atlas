@@ -1,66 +1,51 @@
 'use client';
 
-import { useState } from 'react';
 import { Toast } from '@/components/feedback/Toast';
-import { MigrationFlow, type MigrationResult } from '@/components/migration/MigrationFlow';
+import { MigrationFlow } from '@/components/migration/MigrationFlow';
 import { SignupModal } from '@/components/signup/SignupModal';
 import { Button } from '@/components/ui/Button';
-import { useAuthSession } from '@/hooks/useAuthSession';
-import { readUnmigratedVaultData } from '@/lib/migration/local/localVaultData';
-import type { MigrationRequest } from '@/types/migration';
-import { AccountChip } from './AccountChip';
-
-const WELCOME_TITLE = 'Account created';
-const SIGNED_IN_MESSAGE = "You're signed in and ready to go.";
-const KEPT_LOCAL_MESSAGE =
-  "Your local vaults stay on this device and aren't linked to your account.";
+import { CheckInboxDialog } from '@/components/verification/CheckInboxDialog';
+import { useAccountFlow } from '@/hooks/useAccountFlow';
+import styles from './AuthEntry.module.css';
+import { AccountChip } from './session/AccountChip';
+import { LogoutButton } from './session/LogoutButton';
 
 /**
- * Shows the sign-up button to anonymous users and their account badge once signed in. A successful signup closes the
- * form and then either confirms with a toast or, when there are vaults on this device, offers to migrate them first.
+ * Shows the sign-up button to anonymous users, and their account badge with a log-out button once signed in. A
+ * successful signup closes the form and goes on to email verification when it is required, then to the offer to
+ * migrate local vaults, and finally to a confirmation. A session that ends by itself is announced with a notice.
  */
 export function AuthEntry() {
-  const { session } = useAuthSession();
-  const [isSignupOpen, setIsSignupOpen] = useState(false);
-  const [migrationData, setMigrationData] = useState<MigrationRequest | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  function handleSignupSuccess(): void {
-    setIsSignupOpen(false);
-    const localData = readUnmigratedVaultData();
-
-    if (localData === null) {
-      setToastMessage(SIGNED_IN_MESSAGE);
-    } else {
-      setMigrationData(localData);
-    }
-  }
-
-  function handleMigrationFinish(result: MigrationResult): void {
-    setMigrationData(null);
-    if (result === 'kept-local') {
-      setToastMessage(KEPT_LOCAL_MESSAGE);
-    }
-  }
+  const flow = useAccountFlow();
 
   return (
     <>
-      {session === null ? (
-        <Button onClick={() => setIsSignupOpen(true)}>Sign up</Button>
-      ) : (
-        <AccountChip email={session.user.email} />
+      {flow.status === 'authenticated' && flow.session !== null && (
+        <div className={styles.controls}>
+          <AccountChip email={flow.session.user.email} />
+          <LogoutButton />
+        </div>
       )}
-      {isSignupOpen && (
-        <SignupModal onClose={() => setIsSignupOpen(false)} onSuccess={handleSignupSuccess} />
+      {flow.status === 'anonymous' && <Button onClick={flow.openSignup}>Sign up</Button>}
+      {flow.isSignupOpen && (
+        <SignupModal onClose={flow.closeSignup} onSuccess={flow.handleSignupSuccess} />
       )}
-      {migrationData !== null && (
-        <MigrationFlow data={migrationData} onFinish={handleMigrationFinish} />
+      {flow.verificationEmail !== null && (
+        <CheckInboxDialog
+          email={flow.verificationEmail}
+          hasLocalVaults={flow.hasLocalVaults}
+          onVerified={flow.handleVerified}
+          onUseDifferentEmail={flow.handleUseDifferentEmail}
+        />
       )}
-      {toastMessage !== null && (
+      {flow.migrationData !== null && (
+        <MigrationFlow data={flow.migrationData} onFinish={flow.handleMigrationFinish} />
+      )}
+      {flow.toast !== null && (
         <Toast
-          title={WELCOME_TITLE}
-          message={toastMessage}
-          onDismiss={() => setToastMessage(null)}
+          title={flow.toast.title}
+          message={flow.toast.message}
+          onDismiss={flow.dismissToast}
         />
       )}
     </>

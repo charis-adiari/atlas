@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ApiError } from '@/lib/api/ApiError';
-import { getSession } from '@/lib/auth/session/authSessionStore';
+import { getAuthState } from '@/lib/auth/session/authSessionStore';
+import { logUnexpectedError } from '@/lib/logging/logger';
 import {
   describeMigrationFailure,
   type FailureDescription
@@ -28,7 +29,8 @@ export interface UseMigrationResult {
 /**
  * Drives the migration of local data into the signed-in account. Starting it again after a failure is how the user
  * retries. The data is only flagged as migrated once the API has confirmed it; until then it stays as it was, so a
- * failure always leaves the local copy to fall back on.
+ * failure always leaves the local copy to fall back on. Failures the user was only given a generic message for are
+ * logged with their technical details.
  *
  * @param data the local payload to upload
  */
@@ -43,8 +45,8 @@ export function useMigration(data: MigrationRequest): UseMigrationResult {
     if (isRunningRef.current) {
       return;
     }
-    const session = getSession();
-    if (session === null) {
+    const user = getAuthState().session?.user;
+    if (user === undefined) {
       showFailure(missingSessionFailure());
       return;
     }
@@ -52,19 +54,23 @@ export function useMigration(data: MigrationRequest): UseMigrationResult {
     isRunningRef.current = true;
     setFailure(null);
     setPhase('migrating');
-    const outcome = await migrateWithRetry(data, session, {
+    const outcome = await migrateWithRetry(data, {
       hasUnconfirmedUpload: hasUnconfirmedUploadRef.current,
       onAttempt: setAttempt
     });
     isRunningRef.current = false;
 
     if (outcome.status === 'success') {
-      markVaultDataMigrated(session.user.id, data);
+      markVaultDataMigrated(user.id, data);
       setPhase('succeeded');
       return;
     }
     hasUnconfirmedUploadRef.current = outcome.hasUnconfirmedUpload;
-    showFailure(describeMigrationFailure(outcome));
+    const description = describeMigrationFailure(outcome);
+    if (!description.isExpected) {
+      logUnexpectedError('migration', outcome.error);
+    }
+    showFailure(description);
   }
 
   function showFailure(description: FailureDescription): void {

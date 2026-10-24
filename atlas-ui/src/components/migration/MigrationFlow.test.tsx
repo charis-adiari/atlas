@@ -1,7 +1,17 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearSession, saveSession } from '@/lib/auth/session/authSessionStore';
+import { resetAuthState, endSession, startSession } from '@/lib/auth/session/authSessionStore';
+import { ALREADY_MIGRATED_MESSAGE } from '@/lib/api/migrationApi';
+import { UNEXPECTED_MIGRATION_MESSAGE } from '@/lib/migration/migrationFailure';
+import { setErrorLogSink, type ErrorLogEntry } from '@/lib/logging/logger';
+import {
+  HttpMock,
+  jsonReply,
+  problemReply,
+  type MockReply,
+  TEST_CSRF_TOKEN
+} from '@/test/HttpMock';
 import { LOCAL_VAULT_DATA_KEY, MIGRATION_RECORD_KEY } from '@/lib/migration/local/localVaultData';
 import type { MigrationRequest } from '@/types/migration';
 import { MigrationFlow } from './MigrationFlow';
@@ -9,9 +19,17 @@ import { MigrationFlow } from './MigrationFlow';
 const DATA: MigrationRequest = {
   vaults: [
     { id: 'v1', name: 'Personal', createdAt: '2026-01-01T00:00:00Z' },
-    { id: 'v2', name: 'Work ideas' }
+    { id: 'v2', name: 'Work ideas', createdAt: '2026-01-01T09:00:00Z' }
   ],
-  folders: [{ id: 'f1', vaultId: 'v1', parentFolderId: null, name: 'Inbox' }],
+  folders: [
+    {
+      id: 'f1',
+      vaultId: 'v1',
+      parentFolderId: null,
+      name: 'Inbox',
+      createdAt: '2026-01-01T09:00:00Z'
+    }
+  ],
   files: [
     {
       id: 'n1',
@@ -19,24 +37,27 @@ const DATA: MigrationRequest = {
       folderId: 'f1',
       type: 'note',
       name: 'Weekly review',
-      content: '# Hi'
+      content: '# Hi',
+      createdAt: '2026-01-01T09:00:00Z'
     },
-    { id: 'c1', vaultId: 'v2', folderId: null, type: 'canvas', name: 'Mind map', content: '{}' }
+    {
+      id: 'c1',
+      vaultId: 'v2',
+      folderId: null,
+      type: 'canvas',
+      name: 'Mind map',
+      content: '{}',
+      createdAt: '2026-01-01T09:00:00Z'
+    }
   ],
   backlinks: []
 };
 const STORED_DATA = JSON.stringify(DATA);
 
-const fetchMock = vi.fn<typeof fetch>();
+const http = new HttpMock();
 
-function created(): Response {
-  return new Response(JSON.stringify({ vaults: 2, folders: 1, files: 2, backlinks: 0 }), {
-    status: 201
-  });
-}
-
-function problem(status: number, detail: string): Response {
-  return new Response(JSON.stringify({ statusCode: status, title: 'Problem', detail }), { status });
+function created() {
+  return jsonReply(201, { vaults: 2, folders: 1, files: 2, backlinks: 0 });
 }
 
 function renderFlow() {
@@ -53,7 +74,7 @@ async function advance(milliseconds: number): Promise<void> {
 }
 
 async function failThreeTimes(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+  http.handler.mockRejectedValue(new TypeError('Failed to fetch'));
   await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
   await screen.findByText(/Retrying \(attempt 2 of 3\)/);
   await advance(1000);
@@ -64,21 +85,16 @@ async function failThreeTimes(user: ReturnType<typeof userEvent.setup>): Promise
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
-  vi.stubGlobal('fetch', fetchMock);
+  http.install();
   window.localStorage.setItem(LOCAL_VAULT_DATA_KEY, STORED_DATA);
-  saveSession({
-    user: { id: 'user-1', email: 'jd@example.com' },
-    accessToken: 'jwt-token',
-    tokenType: 'Bearer',
-    expiresIn: 3600
-  });
+  startSession({ id: 'user-1', email: 'jd@example.com' }, Date.now() + 3_600_000);
 });
 
 afterEach(() => {
-  clearSession();
+  http.uninstall();
+  resetAuthState();
+  setErrorLogSink(null);
   window.localStorage.clear();
-  fetchMock.mockReset();
-  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -92,7 +108,7 @@ describe('MigrationFlow prompt', () => {
 
     // Assert
     expect(dialog).toHaveTextContent('2 vaults · 1 note · 1 canvas');
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(http.handler).not.toHaveBeenCalled();
   });
 
   it('does nothing but report that the data stays local when the user declines', async () => {
@@ -104,7 +120,7 @@ describe('MigrationFlow prompt', () => {
 
     // Assert
     expect(onFinish).toHaveBeenCalledWith('kept-local');
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(http.handler).not.toHaveBeenCalled();
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(STORED_DATA);
     expect(window.localStorage.getItem(MIGRATION_RECORD_KEY)).toBeNull();
   });
@@ -118,14 +134,14 @@ describe('MigrationFlow prompt', () => {
 
     // Assert
     expect(onFinish).toHaveBeenCalledWith('kept-local');
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(http.handler).not.toHaveBeenCalled();
   });
 });
 
 describe('MigrationFlow upload', () => {
-  it('uploads everything in one request as the signed-in user', async () => {
+  it('uploads everything in one request authenticated by the session cookie', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(created());
+    http.handler.mockResolvedValue(created());
     const { user } = renderFlow();
 
     // Act
@@ -133,16 +149,17 @@ describe('MigrationFlow upload', () => {
     await screen.findByRole('heading', { name: 'Your vaults are backed up' });
 
     // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('/api/v1/vaults/migrate');
-    expect(init?.headers).toMatchObject({ Authorization: 'Bearer jwt-token' });
-    expect(JSON.parse(init?.body as string)).toEqual(DATA);
+    expect(http.handler).toHaveBeenCalledTimes(1);
+    const request = http.handler.mock.calls[0][0];
+    expect(request.path).toBe('/vaults/migrate');
+    expect(request.headers).not.toHaveProperty('authorization');
+    expect(request.headers['x-csrf-token']).toBe(TEST_CSRF_TOKEN);
+    expect(request.body).toEqual(DATA);
   });
 
   it('shows progress that cannot be dismissed while the upload is running', async () => {
     // Arrange
-    fetchMock.mockReturnValue(new Promise(() => undefined));
+    http.handler.mockReturnValue(new Promise(() => undefined));
     const { user, onFinish } = renderFlow();
 
     // Act
@@ -161,8 +178,8 @@ describe('MigrationFlow upload', () => {
 
   it('flags the vaults as migrated only after the API confirms, and keeps the local data', async () => {
     // Arrange
-    let confirm: (response: Response) => void = () => undefined;
-    fetchMock.mockReturnValue(new Promise<Response>((resolve) => (confirm = resolve)));
+    let confirm: (reply: MockReply) => void = () => undefined;
+    http.handler.mockReturnValue(new Promise<MockReply>((resolve) => (confirm = resolve)));
     const { user } = renderFlow();
     await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
     const recordWhileUploading = window.localStorage.getItem(MIGRATION_RECORD_KEY);
@@ -181,7 +198,7 @@ describe('MigrationFlow upload', () => {
 
   it('confirms the backup and reports the data as migrated', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(created());
+    http.handler.mockResolvedValue(created());
     const { user, onFinish } = renderFlow();
     await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
 
@@ -205,7 +222,7 @@ describe('MigrationFlow failures', () => {
     await failThreeTimes(user);
 
     // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(http.handler).toHaveBeenCalledTimes(3);
     expect(screen.getByRole('alert')).toHaveTextContent('Connection lost while uploading');
     expect(screen.getByRole('alert')).toHaveTextContent(
       "We tried 3 times and couldn't confirm the upload."
@@ -223,15 +240,15 @@ describe('MigrationFlow failures', () => {
     // Arrange
     const { user } = renderFlow();
     await failThreeTimes(user);
-    fetchMock.mockReset();
-    fetchMock.mockResolvedValue(created());
+    http.handler.mockReset();
+    http.handler.mockResolvedValue(created());
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Retry migration' }));
     await screen.findByRole('heading', { name: 'Your vaults are backed up' });
 
     // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(http.handler).toHaveBeenCalledTimes(1);
     expect(window.localStorage.getItem(MIGRATION_RECORD_KEY)).not.toBeNull();
   });
 
@@ -239,8 +256,8 @@ describe('MigrationFlow failures', () => {
     // Arrange
     const { user } = renderFlow();
     await failThreeTimes(user);
-    fetchMock.mockReset();
-    fetchMock.mockResolvedValue(problem(409, 'Some of this data has already been migrated.'));
+    http.handler.mockReset();
+    http.handler.mockResolvedValue(problemReply(400, ALREADY_MIGRATED_MESSAGE));
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Retry migration' }));
@@ -250,9 +267,11 @@ describe('MigrationFlow failures', () => {
     expect(window.localStorage.getItem(MIGRATION_RECORD_KEY)).not.toBeNull();
   });
 
-  it('does not retry data the server rejected and shows its message without a retry button', async () => {
+  it('does not retry data the server rejected, shows a generic message and logs the details, without a retry button', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(problem(400, 'Folder f1 points at a missing parent.'));
+    const sink = vi.fn<(entry: ErrorLogEntry) => void>();
+    setErrorLogSink(sink);
+    http.handler.mockResolvedValue(problemReply(400, 'Folder f1 points at a missing parent.'));
     const { user } = renderFlow();
 
     // Act
@@ -260,8 +279,15 @@ describe('MigrationFlow failures', () => {
     await screen.findByRole('heading', { name: 'Migration interrupted' });
 
     // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('alert')).toHaveTextContent('Folder f1 points at a missing parent.');
+    expect(http.handler).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('alert')).toHaveTextContent(UNEXPECTED_MIGRATION_MESSAGE);
+    expect(screen.getByRole('alert')).not.toHaveTextContent('missing parent');
+    expect(sink).toHaveBeenCalledTimes(1);
+    expect(sink.mock.calls[0][0]).toMatchObject({
+      context: 'migration',
+      statusCode: 400,
+      message: 'Folder f1 points at a missing parent.'
+    });
     expect(screen.getAllByText('Not uploaded')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Retry migration' })).not.toBeInTheDocument();
     expect(window.localStorage.getItem(MIGRATION_RECORD_KEY)).toBeNull();
@@ -269,7 +295,7 @@ describe('MigrationFlow failures', () => {
 
   it('reports a conflict on a first attempt as a failure', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(problem(409, 'Some of this data has already been migrated.'));
+    http.handler.mockResolvedValue(problemReply(400, ALREADY_MIGRATED_MESSAGE));
     const { user } = renderFlow();
 
     // Act
@@ -286,20 +312,20 @@ describe('MigrationFlow failures', () => {
   it('fails without sending anything when nobody is signed in', async () => {
     // Arrange
     const { user } = renderFlow();
-    clearSession();
+    act(() => endSession('expired'));
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
     await screen.findByRole('heading', { name: 'Migration interrupted' });
 
     // Assert
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(http.handler).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('Your session has expired');
   });
 
   it('lets the user continue without migrating, leaving the data local', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(problem(400, 'Rejected'));
+    http.handler.mockResolvedValue(problemReply(400, 'Rejected'));
     const { user, onFinish } = renderFlow();
     await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
     await screen.findByRole('heading', { name: 'Migration interrupted' });
@@ -315,7 +341,7 @@ describe('MigrationFlow failures', () => {
 
   it('describes a single vault in the singular', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(problem(400, 'Rejected'));
+    http.handler.mockResolvedValue(problemReply(400, 'Rejected'));
     const onFinish = vi.fn();
     const single = { ...DATA, vaults: [DATA.vaults[0]], folders: [], files: [] };
     render(<MigrationFlow data={single} onFinish={onFinish} />);

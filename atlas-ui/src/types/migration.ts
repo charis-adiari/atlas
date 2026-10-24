@@ -1,27 +1,26 @@
 /**
- * Represents a local vault being uploaded. Mirrors the API's VaultPayload; timestamps are ISO-8601 strings.
+ * Represents a local vault being uploaded. Mirrors the API's VaultDto. The creation time is an ISO-8601 string and is
+ * required; the API sets the last updated time itself, to the moment of the migration.
  */
 export interface VaultPayload {
   id: string;
   name: string;
-  createdAt?: string;
-  lastUpdatedAt?: string;
+  createdAt: string;
 }
 
 /**
- * Represents a local folder being uploaded. Mirrors the API's FolderPayload.
+ * Represents a local folder being uploaded. Mirrors the API's FolderDto.
  */
 export interface FolderPayload {
   id: string;
   vaultId: string;
   parentFolderId?: string | null;
   name: string;
-  createdAt?: string;
-  lastUpdatedAt?: string;
+  createdAt: string;
 }
 
 /**
- * Represents a local file being uploaded. Mirrors the API's FilePayload; the content is Markdown for a note and
+ * Represents a local file being uploaded. Mirrors the API's FileDto; the content is Markdown for a note and
  * serialised JSON for a canvas.
  */
 export interface FilePayload {
@@ -31,12 +30,11 @@ export interface FilePayload {
   type: 'note' | 'canvas';
   name: string;
   content?: string;
-  createdAt?: string;
-  lastUpdatedAt?: string;
+  createdAt: string;
 }
 
 /**
- * Represents a local link between two files being uploaded. Mirrors the API's BacklinkPayload.
+ * Represents a local link between two files being uploaded. Mirrors the API's BacklinkDto.
  */
 export interface BacklinkPayload {
   sourceFileId: string;
@@ -52,14 +50,4 @@ export interface MigrationRequest {
   folders: FolderPayload[];
   files: FilePayload[];
   backlinks: BacklinkPayload[];
-}
-
-/**
- * Represents the migrate endpoint's answer: how many records of each kind were stored.
- */
-export interface MigrationResponse {
-  vaults: number;
-  folders: number;
-  files: number;
-  backlinks: number;
 }

@@ -1,7 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SESSION_STORAGE_KEY, clearSession, getSession } from '@/lib/auth/session/authSessionStore';
+import { getAuthState, resetAuthState } from '@/lib/auth/session/authSessionStore';
+import {
+  ACCOUNT_NOT_CREATED_MESSAGE,
+  UNEXPECTED_SIGNUP_ERROR_MESSAGE
+} from '@/lib/auth/signupErrors';
+import { setErrorLogSink, type ErrorLogEntry } from '@/lib/logging/logger';
+import { HttpMock, jsonReply, problemReply } from '@/test/HttpMock';
 import type { SignupResponse } from '@/types/auth';
 import { SignupModal } from './SignupModal';
 
@@ -12,23 +18,10 @@ const LOCAL_DATA_VALUE = '[{"name":"Personal"}]';
 
 const SIGNUP_RESPONSE: SignupResponse = {
   user: { id: 'user-1', email: VALID_EMAIL },
-  accessToken: 'jwt-token',
-  tokenType: 'Bearer',
   expiresIn: 3600
 };
 
-const fetchMock = vi.fn<typeof fetch>();
-
-function jsonResponse(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
-
-function problemResponse(status: number, detail: string, errors?: Record<string, string>) {
-  return jsonResponse({ statusCode: status, title: 'Problem', detail, errors }, status);
-}
+const http = new HttpMock();
 
 function renderModal(props: { onLoginClick?: () => void } = {}) {
   const onClose = vi.fn();
@@ -52,15 +45,15 @@ async function fillForm(
 }
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', fetchMock);
+  http.install();
   window.localStorage.setItem(LOCAL_DATA_KEY, LOCAL_DATA_VALUE);
 });
 
 afterEach(() => {
-  clearSession();
+  http.uninstall();
+  resetAuthState();
+  setErrorLogSink(null);
   window.localStorage.clear();
-  fetchMock.mockReset();
-  vi.unstubAllGlobals();
 });
 
 describe('SignupModal', () => {
@@ -167,7 +160,7 @@ describe('SignupModal', () => {
 describe('SignupModal submitting', () => {
   it('sends the trimmed, lower-cased email and the password', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(jsonResponse(SIGNUP_RESPONSE, 201));
+    http.handler.mockResolvedValue(jsonReply(201, SIGNUP_RESPONSE));
     const { user } = renderModal();
     await user.type(screen.getByLabelText('Email'), '  You@Example.COM ');
     await user.type(screen.getByLabelText('Password'), VALID_PASSWORD);
@@ -177,18 +170,15 @@ describe('SignupModal submitting', () => {
     await user.click(getSubmitButton());
 
     // Assert
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('/api/v1/auth/signup');
-    expect(JSON.parse(init?.body as string)).toEqual({
-      email: VALID_EMAIL,
-      password: VALID_PASSWORD
-    });
+    await waitFor(() => expect(http.handler).toHaveBeenCalledTimes(1));
+    const request = http.handler.mock.calls[0][0];
+    expect(request.path).toBe('/auth/signup');
+    expect(request.body).toEqual({ email: VALID_EMAIL, password: VALID_PASSWORD });
   });
 
-  it('stores the token, marks the user authenticated and reports success', async () => {
+  it('starts the session, keeps no token in the page, and reports success', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(jsonResponse(SIGNUP_RESPONSE, 201));
+    http.handler.mockResolvedValue(jsonReply(201, SIGNUP_RESPONSE));
     const { user, onSuccess } = renderModal();
     await fillForm(user);
 
@@ -197,14 +187,14 @@ describe('SignupModal submitting', () => {
 
     // Assert
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(SIGNUP_RESPONSE));
-    expect(getSession()?.accessToken).toBe('jwt-token');
-    expect(getSession()?.user.email).toBe(VALID_EMAIL);
-    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toContain('jwt-token');
+    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().session?.user.email).toBe(VALID_EMAIL);
+    expect(JSON.stringify({ ...window.localStorage })).not.toMatch(/token|jwt|session/i);
   });
 
   it('disables the button and shows progress while the request is in flight', async () => {
     // Arrange
-    fetchMock.mockReturnValue(new Promise(() => undefined));
+    http.handler.mockReturnValue(new Promise(() => undefined));
     const { user } = renderModal();
     await fillForm(user);
 
@@ -215,9 +205,11 @@ describe('SignupModal submitting', () => {
     expect(screen.getByRole('button', { name: 'Creating account…' })).toBeDisabled();
   });
 
-  it('shows the API message and keeps the user anonymous when the email is taken', async () => {
+  it('shows a message that does not reveal why, and keeps the user anonymous, when the email is taken', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(problemResponse(409, 'An account with this email already exists.'));
+    http.handler.mockResolvedValue(
+      problemReply(400, 'The account could not be created with the details provided.')
+    );
     const { user, onSuccess } = renderModal();
     await fillForm(user);
 
@@ -225,17 +217,16 @@ describe('SignupModal submitting', () => {
     await user.click(getSubmitButton());
 
     // Assert
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'An account with this email already exists.'
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(ACCOUNT_NOT_CREATED_MESSAGE);
     expect(onSuccess).not.toHaveBeenCalled();
-    expect(getSession()).toBeNull();
-    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(getAuthState().session).toBeNull();
+    expect(JSON.stringify({ ...window.localStorage })).not.toMatch(/token|jwt|session/i);
   });
 
   it('leaves local data and the typed values untouched after a failed signup', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(problemResponse(500, 'An unexpected error occurred.'));
+    setErrorLogSink(vi.fn());
+    http.handler.mockResolvedValue(problemReply(500, 'An unexpected error occurred.'));
     const { user } = renderModal();
     await fillForm(user);
 
@@ -252,7 +243,7 @@ describe('SignupModal submitting', () => {
 
   it('shows a connection message and stays anonymous when the server is unreachable', async () => {
     // Arrange
-    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    http.handler.mockRejectedValue(new TypeError('Failed to fetch'));
     const { user } = renderModal();
     await fillForm(user);
 
@@ -261,12 +252,14 @@ describe('SignupModal submitting', () => {
 
     // Assert
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't reach the server/i);
-    expect(getSession()).toBeNull();
+    expect(getAuthState().session).toBeNull();
   });
 
-  it('falls back to a generic message when the success response cannot be read', async () => {
+  it('shows a generic message and logs the details when the success response cannot be read', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(new Response('<html></html>', { status: 200 }));
+    const sink = vi.fn<(entry: ErrorLogEntry) => void>();
+    setErrorLogSink(sink);
+    http.handler.mockResolvedValue(jsonReply(200, '<html></html>'));
     const { user } = renderModal();
     await fillForm(user);
 
@@ -274,16 +267,73 @@ describe('SignupModal submitting', () => {
     await user.click(getSubmitButton());
 
     // Assert
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      "We couldn't create your account with these details."
+    expect(await screen.findByRole('alert')).toHaveTextContent(UNEXPECTED_SIGNUP_ERROR_MESSAGE);
+    expect(getAuthState().session).toBeNull();
+    expect(sink).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a generic message, not the server wording, and logs the technical details for a server error', async () => {
+    // Arrange
+    const sink = vi.fn<(entry: ErrorLogEntry) => void>();
+    setErrorLogSink(sink);
+    http.handler.mockResolvedValue(problemReply(500, 'NullPointerException at AuthService:42'));
+    const { user } = renderModal();
+    await fillForm(user);
+
+    // Act
+    await user.click(getSubmitButton());
+
+    // Assert
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(UNEXPECTED_SIGNUP_ERROR_MESSAGE);
+    expect(alert).not.toHaveTextContent('NullPointerException');
+    expect(sink).toHaveBeenCalledTimes(1);
+    expect(sink.mock.calls[0][0]).toMatchObject({
+      context: 'signup',
+      statusCode: 500,
+      message: 'NullPointerException at AuthService:42',
+      path: '/auth/signup'
+    });
+    expect(JSON.stringify(sink.mock.calls[0][0])).not.toContain(VALID_PASSWORD);
+  });
+
+  it('does not log an expected failure such as a refused account', async () => {
+    // Arrange
+    const sink = vi.fn<(entry: ErrorLogEntry) => void>();
+    setErrorLogSink(sink);
+    http.handler.mockResolvedValue(
+      problemReply(400, 'The account could not be created with the details provided.')
     );
-    expect(getSession()).toBeNull();
+    const { user } = renderModal();
+    await fillForm(user);
+
+    // Act
+    await user.click(getSubmitButton());
+    await screen.findByRole('alert');
+
+    // Assert
+    expect(sink).not.toHaveBeenCalled();
+  });
+
+  it('shows a friendly message of its own for a refused account, whatever wording the server used', async () => {
+    // Arrange
+    http.handler.mockResolvedValue(
+      problemReply(400, 'duplicate key value violates constraint uq_users_email')
+    );
+    const { user } = renderModal();
+    await fillForm(user);
+
+    // Act
+    await user.click(getSubmitButton());
+
+    // Assert
+    expect(await screen.findByRole('alert')).toHaveTextContent(ACCOUNT_NOT_CREATED_MESSAGE);
   });
 
   it('shows per-field errors from the API next to their inputs', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(
-      problemResponse(400, 'The request is invalid.', {
+    http.handler.mockResolvedValue(
+      problemReply(400, 'The request is invalid.', {
         email: 'Enter a valid email address',
         password: 'Password is required'
       })
@@ -302,8 +352,8 @@ describe('SignupModal submitting', () => {
 
   it('clears a field error from the API when that field is edited', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(
-      problemResponse(400, 'The request is invalid.', { email: 'Enter a valid email address' })
+    http.handler.mockResolvedValue(
+      problemReply(400, 'The request is invalid.', { email: 'Enter a valid email address' })
     );
     const { user } = renderModal();
     await fillForm(user);
@@ -326,7 +376,7 @@ describe('SignupModal submitting', () => {
     await user.type(screen.getByLabelText('Password'), '{Enter}');
 
     // Assert
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(http.handler).not.toHaveBeenCalled();
   });
 });
 
@@ -454,13 +504,13 @@ describe('SignupModal password confirmation', () => {
     await user.type(screen.getByLabelText('Confirm password'), '{Enter}');
 
     // Assert
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(getSession()).toBeNull();
+    expect(http.handler).not.toHaveBeenCalled();
+    expect(getAuthState().session).toBeNull();
   });
 
   it('never sends the confirmation to the API', async () => {
     // Arrange
-    fetchMock.mockResolvedValue(jsonResponse(SIGNUP_RESPONSE, 201));
+    http.handler.mockResolvedValue(jsonReply(201, SIGNUP_RESPONSE));
     const { user } = renderModal();
     await fillForm(user);
 
@@ -468,8 +518,8 @@ describe('SignupModal password confirmation', () => {
     await user.click(getSubmitButton());
 
     // Assert
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    await waitFor(() => expect(http.handler).toHaveBeenCalledTimes(1));
+    const body = http.handler.mock.calls[0][0].body as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual(['email', 'password']);
   });
 

@@ -4,14 +4,14 @@ import { formatVaultSummary, pluralize, summarizeVaultData } from './vaultSummar
 
 const DATA: MigrationRequest = {
   vaults: [
-    { id: 'v1', name: 'Personal' },
-    { id: 'v2', name: 'Work' }
+    { id: 'v1', name: 'Personal', createdAt: '2026-01-01T09:00:00Z' },
+    { id: 'v2', name: 'Work', createdAt: '2026-01-01T09:00:00Z' }
   ],
   folders: [],
   files: [
-    { id: 'n1', vaultId: 'v1', type: 'note', name: 'One' },
-    { id: 'n2', vaultId: 'v1', type: 'note', name: 'Two' },
-    { id: 'c1', vaultId: 'v2', type: 'canvas', name: 'Map' }
+    { id: 'n1', vaultId: 'v1', type: 'note', name: 'One', createdAt: '2026-01-01T09:00:00Z' },
+    { id: 'n2', vaultId: 'v1', type: 'note', name: 'Two', createdAt: '2026-01-01T09:00:00Z' },
+    { id: 'c1', vaultId: 'v2', type: 'canvas', name: 'Map', createdAt: '2026-01-01T09:00:00Z' }
   ],
   backlinks: []
 };

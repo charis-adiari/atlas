@@ -3,32 +3,18 @@ import type { MigrationRequest } from '@/types/migration';
 export const LOCAL_VAULT_DATA_KEY = 'atlas.local-vault-data';
 export const MIGRATION_RECORD_KEY = 'atlas.local-vault-data.migrated';
 
-const VAULT_FIELDS = ['id', 'name', 'createdAt', 'lastUpdatedAt'] as const;
-const FOLDER_FIELDS = [
-  'id',
-  'vaultId',
-  'parentFolderId',
-  'name',
-  'createdAt',
-  'lastUpdatedAt'
-] as const;
-const FILE_FIELDS = [
-  'id',
-  'vaultId',
-  'folderId',
-  'type',
-  'name',
-  'content',
-  'createdAt',
-  'lastUpdatedAt'
-] as const;
+const VAULT_FIELDS = ['id', 'name', 'createdAt'] as const;
+const FOLDER_FIELDS = ['id', 'vaultId', 'parentFolderId', 'name', 'createdAt'] as const;
+const FILE_FIELDS = ['id', 'vaultId', 'folderId', 'type', 'name', 'content', 'createdAt'] as const;
 const BACKLINK_FIELDS = ['sourceFileId', 'targetFileId'] as const;
-const TIMESTAMP_FIELDS: readonly string[] = ['createdAt', 'lastUpdatedAt'];
+const TIMESTAMP_FIELDS: readonly string[] = ['createdAt'];
 
 type RawRecord = Record<string, unknown>;
 
 /**
- * Reads the vault data kept on this device that has not been migrated to an account yet. Vaults that were migrated
+ * Reads the vault data kept on this device that has not been migrated to an account yet. Placeholder: local vault storage is
+ * being built by another team member, so this reads the contract documented in the README and is the one place to change
+ * when the real storage lands. Vaults that were migrated
  * earlier are left out together with their folders, files and backlinks. Only the fields the API knows are returned,
  * so nothing else that is stored locally can end up in an upload. Data that cannot be read is treated as absent and
  * left untouched.
@@ -49,7 +35,7 @@ export function readUnmigratedVaultData(): MigrationRequest | null {
 
 /**
  * Records that the vaults in the given data are on the account of the given user, so they are not offered for
- * migration again. The local data itself is left in place.
+ * migration again. The local data itself is left in place. Placeholder, like readUnmigratedVaultData.
  */
 export function markVaultDataMigrated(userId: string, data: MigrationRequest): void {
   const vaultIds = new Set(readMigratedVaultIds());
@@ -111,7 +97,8 @@ function pickFields(item: RawRecord, fields: readonly string[]): RawRecord {
 
 /**
  * Turns a stored timestamp into an ISO-8601 string. Epoch milliseconds are converted, because the API would read a
- * bare number as seconds; anything else that is not a string is dropped, which lets the API apply its default.
+ * bare number as seconds; anything else that is not a string is dropped, and the API then refuses the upload because every record needs a
+ * creation time.
  */
 function toIsoTimestamp(value: unknown): string | undefined {
   if (typeof value === 'string') {

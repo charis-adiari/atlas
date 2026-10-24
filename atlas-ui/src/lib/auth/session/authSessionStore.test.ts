@@ -1,21 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SignupResponse } from '@/types/auth';
 import {
-  SESSION_STORAGE_KEY,
-  clearSession,
-  getServerSession,
-  getSession,
-  saveSession,
-  subscribeToSession
+  endSession,
+  getAuthState,
+  getServerAuthState,
+  resetAuthState,
+  startSession,
+  subscribeToAuth
 } from './authSessionStore';
 
 const NOW = new Date('2026-10-12T12:00:00Z').getTime();
-const SIGNUP_RESPONSE: SignupResponse = {
-  user: { id: 'user-1', email: 'you@example.com' },
-  accessToken: 'jwt-token',
-  tokenType: 'Bearer',
-  expiresIn: 3600
-};
+const USER = { id: 'user-1', email: 'jd@example.com' };
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -23,227 +19,147 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  clearSession();
-  window.localStorage.clear();
+  resetAuthState();
   vi.useRealTimers();
-  vi.restoreAllMocks();
 });
 
-describe('saveSession', () => {
-  it('marks the user as signed in with the token and account from the response', () => {
+describe('authSessionStore', () => {
+  it('starts out not yet checked', () => {
     // Arrange
-    expect(getSession()).toBeNull();
+    const state = getAuthState();
 
     // Act
-    saveSession(SIGNUP_RESPONSE);
+    const { status, session } = state;
 
     // Assert
-    expect(getSession()).toEqual({
-      accessToken: 'jwt-token',
-      tokenType: 'Bearer',
-      expiresAt: NOW + 3600 * 1000,
-      user: { id: 'user-1', email: 'you@example.com' }
-    });
+    expect(status).toBe('loading');
+    expect(session).toBeNull();
+    expect(getServerAuthState().status).toBe('loading');
   });
 
-  it('persists the session so it survives a reload', () => {
+  it('marks the user as signed in and holds no token', () => {
     // Arrange
-    const response = SIGNUP_RESPONSE;
+    const expiresAt = NOW + HOUR;
 
     // Act
-    saveSession(response);
+    startSession(USER, expiresAt);
 
     // Assert
-    const stored = JSON.parse(window.localStorage.getItem(SESSION_STORAGE_KEY) ?? 'null');
-    expect(stored.accessToken).toBe('jwt-token');
+    const state = getAuthState();
+    expect(state.status).toBe('authenticated');
+    expect(state.session).toEqual({ user: USER, expiresAt });
+    expect(JSON.stringify(state)).not.toMatch(/token|jwt/i);
   });
 
-  it('keeps the session in memory when the browser refuses to store it', () => {
+  it('returns the same object until the state changes', () => {
     // Arrange
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new DOMException('Quota exceeded', 'QuotaExceededError');
-    });
+    startSession(USER, NOW + HOUR);
 
     // Act
-    saveSession(SIGNUP_RESPONSE);
-
-    // Assert
-    expect(getSession()?.accessToken).toBe('jwt-token');
-  });
-
-  it('notifies subscribers', () => {
-    // Arrange
-    const listener = vi.fn();
-    const unsubscribe = subscribeToSession(listener);
-
-    // Act
-    saveSession(SIGNUP_RESPONSE);
-
-    // Assert
-    expect(listener).toHaveBeenCalledTimes(1);
-    unsubscribe();
-  });
-});
-
-describe('getSession', () => {
-  it('returns the same object until the session changes', () => {
-    // Arrange
-    saveSession(SIGNUP_RESPONSE);
-
-    // Act
-    const first = getSession();
-    const second = getSession();
+    const first = getAuthState();
+    const second = getAuthState();
 
     // Assert
     expect(second).toBe(first);
   });
 
-  it('treats an expired session as anonymous', () => {
-    // Arrange
-    saveSession(SIGNUP_RESPONSE);
-
-    // Act
-    vi.setSystemTime(NOW + 3600 * 1000 + 1);
-
-    // Assert
-    expect(getSession()).toBeNull();
-  });
-
-  it('restores a stored session when the app loads', async () => {
-    // Arrange
-    const session = { ...SIGNUP_RESPONSE, expiresAt: NOW + 60_000 };
-    window.localStorage.setItem(
-      SESSION_STORAGE_KEY,
-      JSON.stringify({
-        accessToken: session.accessToken,
-        tokenType: session.tokenType,
-        expiresAt: session.expiresAt,
-        user: session.user
-      })
-    );
-    vi.resetModules();
-
-    // Act
-    const freshStore = await import('./authSessionStore');
-
-    // Assert
-    expect(freshStore.getSession()?.user.email).toBe('you@example.com');
-  });
-
-  it.each(['not json', '{"accessToken":"x"}', 'null'])(
-    'ignores the stored value %j because it is not a session',
-    async (stored) => {
-      // Arrange
-      window.localStorage.setItem(SESSION_STORAGE_KEY, stored);
-      vi.resetModules();
-
-      // Act
-      const freshStore = await import('./authSessionStore');
-
-      // Assert
-      expect(freshStore.getSession()).toBeNull();
-    }
-  );
-
-  it('treats an unreadable storage as empty', async () => {
-    // Arrange
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new DOMException('Denied', 'SecurityError');
-    });
-    vi.resetModules();
-
-    // Act
-    const freshStore = await import('./authSessionStore');
-
-    // Assert
-    expect(freshStore.getSession()).toBeNull();
-  });
-});
-
-describe('clearSession', () => {
-  it('leaves the user anonymous and removes the stored session', () => {
-    // Arrange
-    saveSession(SIGNUP_RESPONSE);
-
-    // Act
-    clearSession();
-
-    // Assert
-    expect(getSession()).toBeNull();
-    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
-  });
-
-  it('leaves other local data alone', () => {
-    // Arrange
-    window.localStorage.setItem('atlas.vaults', '[1,2,3]');
-    saveSession(SIGNUP_RESPONSE);
-
-    // Act
-    clearSession();
-
-    // Assert
-    expect(window.localStorage.getItem('atlas.vaults')).toBe('[1,2,3]');
-  });
-});
-
-describe('subscribeToSession', () => {
-  it('stops notifying after unsubscribing', () => {
+  it('notifies subscribers of changes, and stops after unsubscribing', () => {
     // Arrange
     const listener = vi.fn();
-    const unsubscribe = subscribeToSession(listener);
+    const unsubscribe = subscribeToAuth(listener);
+
+    // Act
+    startSession(USER, NOW + HOUR);
     unsubscribe();
-
-    // Act
-    saveSession(SIGNUP_RESPONSE);
-
-    // Assert
-    expect(listener).not.toHaveBeenCalled();
-  });
-
-  it('picks up a sign-in made in another tab', () => {
-    // Arrange
-    const listener = vi.fn();
-    const unsubscribe = subscribeToSession(listener);
-    const stored = JSON.stringify({
-      accessToken: 'other-tab-jwt',
-      tokenType: 'Bearer',
-      expiresAt: NOW + 60_000,
-      user: { id: 'user-2', email: 'other@example.com' }
-    });
-    window.localStorage.setItem(SESSION_STORAGE_KEY, stored);
-
-    // Act
-    window.dispatchEvent(new StorageEvent('storage', { key: SESSION_STORAGE_KEY }));
+    endSession('signed-out');
 
     // Assert
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(getSession()?.accessToken).toBe('other-tab-jwt');
-    unsubscribe();
   });
 
-  it('ignores storage changes to other keys', () => {
+  it('does not notify when nothing changed', () => {
     // Arrange
+    endSession(null);
     const listener = vi.fn();
-    const unsubscribe = subscribeToSession(listener);
+    subscribeToAuth(listener);
 
     // Act
-    window.dispatchEvent(new StorageEvent('storage', { key: 'something-else' }));
+    endSession(null);
 
     // Assert
     expect(listener).not.toHaveBeenCalled();
-    unsubscribe();
   });
-});
 
-describe('getServerSession', () => {
-  it('is anonymous during server rendering', () => {
+  it('ends the session by itself when it expires and remembers why', () => {
     // Arrange
-    saveSession(SIGNUP_RESPONSE);
+    startSession(USER, NOW + HOUR);
 
     // Act
-    const session = getServerSession();
+    vi.advanceTimersByTime(HOUR);
 
     // Assert
-    expect(session).toBeNull();
+    expect(getAuthState()).toEqual({ status: 'anonymous', session: null, endReason: 'expired' });
+  });
+
+  it('treats a session that has already expired as ended', () => {
+    // Arrange
+    const expiresAt = NOW - 1;
+
+    // Act
+    startSession(USER, expiresAt);
+
+    // Assert
+    expect(getAuthState()).toEqual({ status: 'anonymous', session: null, endReason: 'expired' });
+  });
+
+  it('stays signed in until the expiry moment', () => {
+    // Arrange
+    startSession(USER, NOW + HOUR);
+
+    // Act
+    vi.advanceTimersByTime(HOUR - 1);
+
+    // Assert
+    expect(getAuthState().status).toBe('authenticated');
+  });
+
+  it('keeps the reason when the user signs out before the expiry', () => {
+    // Arrange
+    startSession(USER, NOW + HOUR);
+
+    // Act
+    endSession('signed-out');
+    vi.advanceTimersByTime(2 * HOUR);
+
+    // Assert
+    expect(getAuthState().endReason).toBe('signed-out');
+  });
+
+  it('handles an expiry further away than a timer can wait', () => {
+    // Arrange
+    const thirtyDays = 30 * DAY;
+    startSession(USER, NOW + thirtyDays);
+
+    // Act
+    vi.advanceTimersByTime(25 * DAY);
+    const statusAfterTwentyFiveDays = getAuthState().status;
+    vi.advanceTimersByTime(5 * DAY);
+
+    // Assert
+    expect(statusAfterTwentyFiveDays).toBe('authenticated');
+    expect(getAuthState().endReason).toBe('expired');
+  });
+
+  it('goes back to not yet checked when reset', () => {
+    // Arrange
+    startSession(USER, NOW + HOUR);
+
+    // Act
+    resetAuthState();
+
+    // Assert
+    expect(getAuthState().status).toBe('loading');
+    vi.advanceTimersByTime(2 * HOUR);
+    expect(getAuthState().status).toBe('loading');
   });
 });

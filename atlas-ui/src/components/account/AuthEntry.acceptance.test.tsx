@@ -1,7 +1,9 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SESSION_STORAGE_KEY, clearSession, getSession } from '@/lib/auth/session/authSessionStore';
+import { getAuthState, resetAuthState } from '@/lib/auth/session/authSessionStore';
+import { ACCOUNT_NOT_CREATED_MESSAGE, INVALID_DETAILS_MESSAGE } from '@/lib/auth/signupErrors';
+import { setErrorLogSink } from '@/lib/logging/logger';
 import { LOCAL_VAULT_DATA_KEY, MIGRATION_RECORD_KEY } from '@/lib/migration/local/localVaultData';
 import { FakeAtlasApi } from '@/test/FakeAtlasApi';
 import {
@@ -13,8 +15,8 @@ import { AuthEntry } from './AuthEntry';
 
 const EMAIL = 'jd@example.com';
 const PASSWORD = 'Valid-Passw0rd';
-const SIGNUP_PATH = '/api/v1/auth/signup';
-const MIGRATE_PATH = '/api/v1/vaults/migrate';
+const SIGNUP_PATH = '/auth/signup';
+const MIGRATE_PATH = '/vaults/migrate';
 const PROMPT_TITLE = 'Move your vaults to your account?';
 const BACKED_UP_TITLE = 'Your vaults are backed up';
 const INTERRUPTED_TITLE = 'Migration interrupted';
@@ -32,7 +34,7 @@ async function createAccount(
   password = PASSWORD,
   confirmation = password
 ): Promise<void> {
-  await user.click(screen.getByRole('button', { name: 'Sign up' }));
+  await user.click(await screen.findByRole('button', { name: 'Sign up' }));
   await user.type(screen.getByLabelText('Email'), email);
   await user.type(screen.getByLabelText('Password'), password);
   await user.type(screen.getByLabelText('Confirm password'), confirmation);
@@ -63,9 +65,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  clearSession();
+  api.uninstall();
+  resetAuthState();
+  setErrorLogSink(null);
   window.localStorage.clear();
-  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -74,7 +77,7 @@ describe('US-02 AC1: valid signup creates an account', () => {
     // Arrange
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<AuthEntry />);
-    expect(getSession()).toBeNull();
+    expect(getAuthState().session).toBeNull();
 
     // Act
     await createAccount(user, '  JD@Example.com ');
@@ -85,12 +88,15 @@ describe('US-02 AC1: valid signup creates an account', () => {
     expect(badge).toBeInTheDocument();
     expect(account).toBeDefined();
     expect(api.countRequests(SIGNUP_PATH)).toBe(1);
-    expect(api.requests[0].body).toEqual({ email: EMAIL, password: PASSWORD });
-    expect(getSession()?.user).toEqual({ id: account?.id, email: EMAIL });
+    expect(api.requests.find((request) => request.path === SIGNUP_PATH)?.body).toEqual({
+      email: EMAIL,
+      password: PASSWORD
+    });
+    expect(getAuthState().session?.user).toEqual({ id: account?.id, email: EMAIL });
     expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
-  it('stores the access token so the user stays signed in', async () => {
+  it('keeps the session in a cookie the page cannot read, and no token anywhere in the page', async () => {
     // Arrange
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<AuthEntry />);
@@ -100,9 +106,10 @@ describe('US-02 AC1: valid signup creates an account', () => {
     await screen.findByRole('img', { name: `Signed in as ${EMAIL}` });
 
     // Assert
-    const stored = JSON.parse(window.localStorage.getItem(SESSION_STORAGE_KEY) ?? 'null');
-    expect(stored.accessToken).toBe(`fake-jwt.${api.findAccount(EMAIL)?.id}`);
-    expect(stored.tokenType).toBe('Bearer');
+    expect(api.getSessionUserId()).toBe(api.findAccount(EMAIL)?.id);
+    expect(JSON.stringify({ ...window.localStorage })).not.toMatch(/token|jwt|session/i);
+    expect(JSON.stringify(getAuthState())).not.toMatch(/token|jwt/i);
+    expect(api.requests.every((request) => !('authorization' in request.headers))).toBe(true);
   });
 
   it('goes straight to the signed-in state, with no migration prompt, when there is no local data', async () => {
@@ -139,7 +146,7 @@ describe('US-02 step 4: the migration prompt appears when local data exists', ()
     expect(
       within(prompt).getByRole('button', { name: 'Keep on this device only' })
     ).toBeInTheDocument();
-    expect(getSession()).not.toBeNull();
+    expect(getAuthState().session).not.toBeNull();
     expect(api.countRequests(MIGRATE_PATH)).toBe(0);
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
   });
@@ -186,7 +193,7 @@ describe('US-02 step 5 and 6: confirming uploads all vaults and ties them to the
     expect(api.getVaultOwnerIds()).toEqual([account?.id]);
   });
 
-  it('uploads in a single request authenticated as the account that was just created', async () => {
+  it("uploads in a single request authenticated by the new account's session cookie, with a CSRF token", async () => {
     // Arrange
     storeLocalVaultData(createLocalVaultData());
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -199,7 +206,9 @@ describe('US-02 step 5 and 6: confirming uploads all vaults and ties them to the
     // Assert
     const migrateRequests = api.requests.filter((request) => request.path === MIGRATE_PATH);
     expect(migrateRequests).toHaveLength(1);
-    expect(migrateRequests[0].authorization).toBe(`Bearer ${getSession()?.accessToken}`);
+    expect(migrateRequests[0].headers).not.toHaveProperty('authorization');
+    expect(migrateRequests[0].headers['x-csrf-token']).toBe('test-csrf-token');
+    expect(api.getVaultOwnerIds()).toEqual([api.findAccount(EMAIL)?.id]);
   });
 
   it('confirms the backup, records which vaults were migrated, and keeps the local copy', async () => {
@@ -237,7 +246,7 @@ describe('US-02 step 5.1: declining creates the account without moving data', ()
 
     // Assert
     expect(api.findAccount(EMAIL)).toBeDefined();
-    expect(getSession()?.user.email).toBe(EMAIL);
+    expect(getAuthState().session?.user.email).toBe(EMAIL);
     expect(screen.getByRole('img', { name: `Signed in as ${EMAIL}` })).toBeInTheDocument();
     expect(api.countRequests(MIGRATE_PATH)).toBe(0);
     expect(api.getVaultOwnerIds()).toEqual([]);
@@ -263,11 +272,9 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
 
     // Assert
     const dialog = await screen.findByRole('dialog', { name: 'Create your account' });
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'An account with this email already exists.'
-    );
-    expect(getSession()).toBeNull();
-    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(ACCOUNT_NOT_CREATED_MESSAGE);
+    expect(getAuthState().session).toBeNull();
+    expect(JSON.stringify({ ...window.localStorage })).not.toMatch(/token|jwt|session/i);
     expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign up' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: PROMPT_TITLE })).not.toBeInTheDocument();
@@ -296,7 +303,7 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     const storedData = storeLocalVaultData(createLocalVaultData());
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<AuthEntry />);
-    await user.click(screen.getByRole('button', { name: 'Sign up' }));
+    await user.click(await screen.findByRole('button', { name: 'Sign up' }));
     await user.type(screen.getByLabelText('Email'), EMAIL);
 
     // Act
@@ -307,8 +314,8 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     expect(screen.getByText('One uppercase letter').textContent).toContain('(not met)');
     expect(screen.getByText('One digit').textContent).toContain('(not met)');
     expect(screen.getByText('One special character').textContent).toContain('(not met)');
-    expect(api.requests).toHaveLength(0);
-    expect(getSession()).toBeNull();
+    expect(api.countRequests(SIGNUP_PATH)).toBe(0);
+    expect(getAuthState().session).toBeNull();
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
   });
 
@@ -317,7 +324,7 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     const storedData = storeLocalVaultData(createLocalVaultData());
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<AuthEntry />);
-    await user.click(screen.getByRole('button', { name: 'Sign up' }));
+    await user.click(await screen.findByRole('button', { name: 'Sign up' }));
     await user.type(screen.getByLabelText('Email'), EMAIL);
     await user.type(screen.getByLabelText('Password'), PASSWORD);
 
@@ -327,8 +334,8 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     // Assert
     expect(screen.getByText("Passwords don't match")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeDisabled();
-    expect(api.requests).toHaveLength(0);
-    expect(getSession()).toBeNull();
+    expect(api.countRequests(SIGNUP_PATH)).toBe(0);
+    expect(getAuthState().session).toBeNull();
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
   });
 
@@ -345,10 +352,10 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     // Assert
     const dialog = await screen.findByRole('dialog', { name: 'Create your account' });
     expect(await within(dialog).findByText('Password is too weak')).toBeInTheDocument();
-    expect(within(dialog).getByRole('alert')).toHaveTextContent('The request is invalid.');
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(INVALID_DETAILS_MESSAGE);
     expect(api.findAccount(EMAIL)).toBeUndefined();
-    expect(getSession()).toBeNull();
-    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(getAuthState().session).toBeNull();
+    expect(JSON.stringify({ ...window.localStorage })).not.toMatch(/token|jwt|session/i);
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
   });
 });
@@ -404,6 +411,7 @@ describe('US-02 step 6.1 / AC4: a network failure during migration retries or ro
     await createAccount(user);
     await screen.findByRole('dialog', { name: PROMPT_TITLE });
     api.setNetworkDown(true);
+    const attemptsBeforeOutage = api.http.attemptedPaths.length;
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
@@ -414,14 +422,19 @@ describe('US-02 step 6.1 / AC4: a network failure during migration retries or ro
     const failure = await screen.findByRole('dialog', { name: INTERRUPTED_TITLE });
 
     // Assert
-    expect(api.countRequests(MIGRATE_PATH)).toBe(3);
+    expect(api.http.attemptedPaths.slice(attemptsBeforeOutage)).toEqual([
+      '/auth/csrf',
+      '/auth/csrf',
+      '/auth/csrf'
+    ]);
+    expect(api.countRequests(MIGRATE_PATH)).toBe(0);
     expect(api.getVaultOwnerIds()).toEqual([]);
     expect(failure).toHaveTextContent('Connection lost while uploading');
     expect(failure).toHaveTextContent('Your local data is safe');
     expect(within(failure).getByRole('button', { name: 'Retry migration' })).toBeInTheDocument();
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
     expect(window.localStorage.getItem(MIGRATION_RECORD_KEY)).toBeNull();
-    expect(getSession()).not.toBeNull();
+    expect(getAuthState().session).not.toBeNull();
   });
 
   it('lets the user retry once the network is back, without duplicating anything', async () => {
@@ -494,6 +507,100 @@ describe('US-02 step 6.1 / AC4: a network failure during migration retries or ro
     // Assert
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: `Signed in as ${EMAIL}` })).toBeInTheDocument();
+    expect(api.getVaultOwnerIds()).toEqual([]);
+    expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
+    expect(window.localStorage.getItem(MIGRATION_RECORD_KEY)).toBeNull();
+  });
+});
+
+describe('logout ends the session', () => {
+  it('Given a signed-in user, when they log out, then the server session is gone and they are anonymous again, even after a reload', async () => {
+    // Arrange
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const { unmount } = render(<AuthEntry />);
+    await createAccount(user);
+    await screen.findByRole('img', { name: `Signed in as ${EMAIL}` });
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Log out' }));
+    await screen.findByRole('button', { name: 'Sign up' });
+    unmount();
+    resetAuthState();
+    render(<AuthEntry />);
+
+    // Assert
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeInTheDocument();
+    expect(api.getSessionUserId()).toBeNull();
+    expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
+  });
+
+  it('Given a logged-out user, when something protected is attempted, then the server refuses it', async () => {
+    // Arrange
+    const storedData = storeLocalVaultData(createLocalVaultData());
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<AuthEntry />);
+    await createAccount(user);
+    await screen.findByRole('dialog', { name: PROMPT_TITLE });
+    api.expireSession();
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
+    const failure = await screen.findByRole('dialog', { name: INTERRUPTED_TITLE });
+
+    // Assert
+    expect(failure).toHaveTextContent('Your session has expired');
+    expect(api.getVaultOwnerIds()).toEqual([]);
+    expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
+  });
+});
+
+describe('token expiry', () => {
+  it('Given a signed-in user, when the token reaches its expiry, then they are signed out and told why', async () => {
+    // Arrange
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<AuthEntry />);
+    await createAccount(user);
+    await screen.findByRole('img', { name: `Signed in as ${EMAIL}` });
+
+    // Act
+    await advance(3_600_000);
+
+    // Assert
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
+    expect(getAuthState()).toMatchObject({ status: 'anonymous', endReason: 'expired' });
+    expect(screen.getByRole('status')).toHaveTextContent('Session expired');
+  });
+
+  it('Given an expired token, when the user reloads, then they are anonymous and nothing is restored', async () => {
+    // Arrange
+    api.signInAs(api.addAccount(EMAIL, PASSWORD));
+    api.expireSession();
+
+    // Act
+    render(<AuthEntry />);
+
+    // Assert
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
+  });
+
+  it('Given a migration in progress, when the token has expired on the server, then the user is signed out, nothing is stored and local data is preserved', async () => {
+    // Arrange
+    const storedData = storeLocalVaultData(createLocalVaultData());
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<AuthEntry />);
+    await createAccount(user);
+    await screen.findByRole('dialog', { name: PROMPT_TITLE });
+    api.expireSession();
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Migrate my vaults' }));
+    await screen.findByRole('dialog', { name: INTERRUPTED_TITLE });
+
+    // Assert
+    expect(getAuthState()).toMatchObject({ status: 'anonymous', endReason: 'expired' });
+    expect(api.countRequests(MIGRATE_PATH)).toBe(1);
     expect(api.getVaultOwnerIds()).toEqual([]);
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);
     expect(window.localStorage.getItem(MIGRATION_RECORD_KEY)).toBeNull();
