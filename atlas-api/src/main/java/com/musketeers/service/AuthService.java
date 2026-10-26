@@ -76,6 +76,8 @@ public class AuthService {
      * Stores the user and flushes straight away so a duplicate email surfaces here instead of at commit time. The
      * check in {@link #signup} cannot stop two simultaneous signups for the same email, so the UNIQUE constraint on
      * the table is the real guard, and its violation is turned into the same message as any other refused signup.
+     * Depending on the Hibernate version the violation is thrown itself or wrapped in another persistence exception,
+     * so both are recognised.
      *
      * @throws IllegalArgumentException if the database rejected the user because of a constraint
      */
@@ -83,7 +85,7 @@ public class AuthService {
         try {
             repository.persistAndFlush(user);
         } catch (PersistenceException e) {
-            if (e.getCause() instanceof ConstraintViolationException) {
+            if (e instanceof ConstraintViolationException || e.getCause() instanceof ConstraintViolationException) {
                 throw new IllegalArgumentException(SIGNUP_FAILED_MESSAGE);
             }
             throw e;

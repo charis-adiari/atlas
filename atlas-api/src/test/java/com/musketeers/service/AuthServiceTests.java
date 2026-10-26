@@ -179,6 +179,23 @@ public class AuthServiceTests {
     }
 
     @Test
+    void signup_WhenTheConstraintViolationIsThrownItself_ThrowsIllegalArgumentExceptionWithGenericMessage() {
+        // Arrange
+        when(hasher.hash(PASSWORD)).thenReturn(HASH);
+        doThrow(mock(ConstraintViolationException.class)).when(repository).persistAndFlush(any(User.class));
+
+        // Act
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.signup(EMAIL, PASSWORD)
+        );
+
+        // Assert
+        assertEquals(AuthService.SIGNUP_FAILED_MESSAGE, ex.getMessage());
+        verifyNoInteractions(tokenService, emailVerificationService);
+    }
+
+    @Test
     void signup_WhenDatabaseFailsForAnotherReason_RethrowsTheError() {
         // Arrange
         when(hasher.hash(PASSWORD)).thenReturn(HASH);

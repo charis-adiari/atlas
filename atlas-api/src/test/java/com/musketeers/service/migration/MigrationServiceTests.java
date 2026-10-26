@@ -275,6 +275,21 @@ public class MigrationServiceTests {
     }
 
     @Test
+    void migrate_WhenTheConstraintViolationIsThrownItself_ThrowsIllegalArgumentExceptionWithGenericMessage() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
+        doThrow(mock(ConstraintViolationException.class)).when(vaultRepository)
+                .persist(ArgumentMatchers.<Vault>anyList());
+
+        // Act
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class, () -> service.migrate(USER_ID, fullRequest()));
+
+        // Assert
+        assertEquals(MigrationService.NOT_SAVED_MESSAGE, ex.getMessage());
+    }
+
+    @Test
     void migrate_WhenDatabaseFailsForAnotherReason_RethrowsTheError() {
         // Arrange
         when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
