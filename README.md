@@ -60,7 +60,7 @@ The frontend will be built using React + NextJS. The backend will be built using
 
 ### Code Size Limits
 
-- **Methods:** maximum 60 lines Approaching this is a sign to extract helper methods.
+- **Methods:** maximum 60 lines. Approaching this is a sign to extract helper methods.
 - **Classes:** ideally 100–300 lines. Classes over 500 lines will have their PR rejected outright.
 
 ### Naming Conventions

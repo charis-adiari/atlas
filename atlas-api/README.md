@@ -91,7 +91,7 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
 
 ### Type Safety
 
-- `var` and `any`-equivalents are not allowed except in tests.
+- `any`-equivalents are not allowed except in tests.
 
 ### Testing
 - Tests live in a mirrored `tests/` tree
