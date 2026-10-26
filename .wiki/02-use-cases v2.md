@@ -167,7 +167,7 @@
   2. System updates the file's location in the tree
   3. Existing links to/from this file remain functional (stable ID based) — no prompt needed since names/paths aren't the link mechanism
 - **Exception Flows:**
-  - E1: Target folder already contains a file with the same name → validation error, move is blocked; user must rename manually first (confirmed: intentionally different from the auto-suffix behavior on file creation)
+  - E1: Target folder already contains a file with the same name → validation error, move is blocked; user must rename manually first (confirmed: intentionally different from the auto-suffix behaviour on file creation)
 - **Postconditions:** File appears under its new parent folder; all links remain intact
 
 ### UC-12: Delete a note
@@ -218,7 +218,7 @@
 - **Preconditions:** Canvas file is open
 - **Main Flow:**
   1. User double-clicks a blank area of the canvas
-  2. System creates a new text element at that position, ready for input immediately — no dialog, no tool selection required
+  2. System creates a new text element at that position, ready for input immediately — no dialogue, no tool selection required
   3. User types content
   4. User clicks away or presses Escape to finish editing
 - **Alternative Flows:**
@@ -320,7 +320,7 @@
 
 ### UC-23: Define a viewport-crop region *(reclassified — see note below)*
 
-> **Reclassification note:** Originally scoped here as a standalone canvas action. Confirmed instead that a crop is defined *in the moment of embedding, from within the note* — not something a user pre-defines on the canvas by itself. This use case is folded into the embed-creation flow in **Section E (UC-29)** rather than detailed separately here, to avoid two conflicting versions of the same behavior.
+> **Reclassification note:** Originally scoped here as a standalone canvas action. Confirmed instead that a crop is defined *in the moment of embedding, from within the note* — not something a user pre-defines on the canvas by itself. This use case is folded into the embed-creation flow in **Section E (UC-29)** rather than detailed separately here, to avoid two conflicting versions of the same behaviour.
 
 ---
 
@@ -368,10 +368,10 @@
 - **Exception Flows:**
   - E1: User cancels the picker → no link created
   - E2: Target note is empty (no blocks yet) → only "whole note" is offered as a target
-  - E3: The linked block is later removed through normal editing (not an explicit delete action) → **confirmed:** triggers the same confirm-before-delete modal used for explicit deletions elsewhere (see note on this tradeoff below)
+  - E3: The linked block is later removed through normal editing (not an explicit delete action) → **confirmed:** triggers the same confirm-before-delete modal used for explicit deletions elsewhere (see note on this trade-off below)
 - **Postconditions:** Canvas element is linked to the note or a specific block within it; clicking it navigates there (UC-30)
 
-> **Note on E3:** This is a deliberate, informed tradeoff — normal editing that touches a linked block will interrupt with a confirmation modal, which is in tension with the "get out of the way" principle. Flagging as worth revisiting once we can see it in an actual prototype.
+> **Note on E3:** This is a deliberate, informed trade-off — normal editing that touches a linked block will interrupt with a confirmation modal, which is in tension with the "get out of the way" principle. Flagging as worth revisiting once we can see it in an actual prototype.
 
 > **Cardinality (confirmed #54):** A single canvas element can link to only **one** note/block at a time (single target). There is **no restriction** on the reverse — many different canvas elements can all point to the same note.
 
@@ -382,7 +382,7 @@
 ## Resolved Decisions (previously Open Questions, Batch 1)
 
 1. **Unified UC-25/UC-26 flow:** Confirmed — one picker, choice of whole-note or specific block.
-2. **Block-removal-during-editing warning level:** Confirmed — same heavy confirm modal as explicit deletions, with the tradeoff explicitly noted above.
+2. **Block-removal-during-editing warning level:** Confirmed — same heavy confirm modal as explicit deletions, with the trade-off explicitly noted above.
 3. **Cardinality (canvas element → note):** Confirmed — one target per element; many elements may point to the same note.
 
 ---
@@ -512,15 +512,15 @@ MVP uses **full swap only**: canvas and note replace each other in the main cont
 
 ## Resolved Decision — Unlink Confirmation
 
-Removing a link/embed is instant, with no confirmation dialog. Undo/redo (UC-47) is the intended safety net for accidental unlinks.
+Removing a link/embed is instant, with no confirmation dialogue. Undo/redo (UC-47) is the intended safety net for accidental unlinks.
 
 ## Quality Control Note — Duplicate Use Cases Identified
 
-The following inventory items are **not distinct flows** — they describe behavior already fully specified elsewhere. Cross-referenced here rather than duplicated, to avoid two sources of truth drifting apart:
+The following inventory items are **not distinct flows** — they describe behaviour already fully specified elsewhere. Cross-referenced here rather than duplicated, to avoid two sources of truth drifting apart:
 
 | Inventory ID | Duplicates | Notes |
 |---|---|---|
-| UC-34 (rename a linked file) | **UC-10** (Section B) | Same stable-ID rename behavior, already fully specified |
+| UC-34 (rename a linked file) | **UC-10** (Section B) | Same stable-ID rename behaviour, already fully specified |
 | UC-35 (delete canvas element w/ dependents) | **UC-22** (Section C) | Same dependent-check-then-confirm flow |
 | UC-36 (delete canvas w/ dependents) | **UC-13** (Section B) | Same flow, canvas-level |
 | UC-37 (delete note that canvas elements point to) | **UC-12** (Section B) | Same flow, note-level |
@@ -534,11 +534,11 @@ The following inventory items are **not distinct flows** — they describe behav
 - **Goal:** Notice a broken link/embed and either fix it or clean it up
 - **Preconditions:** A link or embed exists whose target was deleted (e.g. the user previously chose "keep as broken" rather than remove, per the confirm-or-broken-link model), or otherwise became invalid
 - **Main Flow:**
-  1. User sees a broken-link indicator — a grayed-out badge on a canvas element, or a "⚠ Missing content" placeholder where a note embed used to render
+  1. User sees a broken-link indicator — a greyed-out badge on a canvas element, or a "⚠ Missing content" placeholder where a note embed used to render
   2. User clicks the broken indicator
   3. System presents two options: **Relink** (pick a new target) or **Remove** (delete the dangling reference)
   4. **If Relink:** system opens the same picker used in UC-25/UC-27, user selects a new valid target, the link now points there
-  5. **If Remove:** the broken reference is deleted outright — same lightweight, instant behavior as UC-32
+  5. **If Remove:** the broken reference is deleted outright — same lightweight, instant behaviour as UC-32
 - **Alternative Flows:**
   - A1: User ignores the broken indicator and keeps working — it persists indefinitely until addressed, with no forced resolution
 - **Postconditions:** The broken link is either relinked to a valid target or fully removed
@@ -551,7 +551,7 @@ That closes out Linking & Embedding — the most complex section, and the one wi
 
 ## Open Question / Recommendation
 
-Since broken links can persist silently (per A1 above) until a user happens to notice them, there's no way to find them all at once. **Should there be a "find all broken links" maintenance view for the vault (a simple list), or is stumbling across them one at a time acceptable for MVP?** This isn't blocking — flagging it now while we're still in this headspace, but happy to park it as a Fast-Follow item if you'd rather keep moving.
+Since broken links can persist silently (per A1 above) until a user happens to notice them, there's no way to find them all at once. **Should there be a "find all broken links" maintenance view for the vault (a simple list), or is stumbling across them one at a time acceptable for MVP?**
 
 ## Resolved Decision — Broken-Links Maintenance View
 
