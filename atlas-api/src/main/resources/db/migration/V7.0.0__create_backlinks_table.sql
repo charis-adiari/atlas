@@ -28,3 +28,5 @@ CREATE TABLE backlinks (
 CREATE INDEX idx_backlinks_target ON backlinks (target_file_id);
 -- Serves the vault_id cascade.
 CREATE INDEX idx_backlinks_vault ON backlinks (vault_id);
+
+-- rollback: DROP TABLE IF EXISTS backlinks;

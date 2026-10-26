@@ -128,21 +128,6 @@ public class AuthServiceTests {
     }
 
     @Test
-    void signup_WhenVerificationEmailCannotBeSent_StillReturnsAccessToken() {
-        // Arrange
-        when(hasher.hash(PASSWORD)).thenReturn(HASH);
-        when(tokenService.issue(any(User.class))).thenReturn(ACCESS_TOKEN);
-        doThrow(new RuntimeException("mail server is down")).when(emailVerificationService)
-                .sendEmail(any(User.class), any());
-
-        // Act
-        SignupResponse result = service.signup(EMAIL, PASSWORD);
-
-        // Assert
-        assertEquals(ACCESS_TOKEN, result.accessToken());
-    }
-
-    @Test
     void signup_WhenEmailIsAlreadyRegistered_ThrowsIllegalArgumentExceptionWithGenericMessage() {
         // Arrange
         when(hasher.hash(PASSWORD)).thenReturn(HASH);

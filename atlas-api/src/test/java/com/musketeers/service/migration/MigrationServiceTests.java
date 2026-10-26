@@ -17,10 +17,8 @@ import com.musketeers.repository.vault.BacklinkRepository;
 import com.musketeers.repository.vault.FileRepository;
 import com.musketeers.repository.vault.FolderRepository;
 import com.musketeers.repository.vault.VaultRepository;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceException;
-import jakarta.persistence.Query;
 import jakarta.ws.rs.ForbiddenException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,12 +42,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -83,12 +78,6 @@ public class MigrationServiceTests {
     @Mock
     MigrationPayloadChecker checker;
 
-    @Mock
-    EntityManager entityManager;
-
-    @Mock
-    Query nativeQuery;
-
     @Captor
     ArgumentCaptor<List<Vault>> vaults;
 
@@ -107,8 +96,7 @@ public class MigrationServiceTests {
     void createService() {
         service = new MigrationService(
                 userRepository, vaultRepository, folderRepository, fileRepository, backlinkRepository, checker,
-                new MigrationMapperImpl(), entityManager);
-        lenient().when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
+                new MigrationMapperImpl());
     }
 
     @Test
@@ -205,7 +193,7 @@ public class MigrationServiceTests {
     }
 
     @Test
-    void migrate_PostponesTheParentCheckUntilEverythingIsFlushed() {
+    void migrate_InsertsVaultsBeforeFoldersAndFlushesEverything() {
         // Arrange
         when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
 
@@ -213,15 +201,12 @@ public class MigrationServiceTests {
         service.migrate(USER_ID, fullRequest());
 
         // Assert
-        InOrder order = inOrder(entityManager, vaultRepository, folderRepository, fileRepository, backlinkRepository);
-        order.verify(entityManager).createNativeQuery(MigrationService.DEFER_PARENT_CHECK);
+        InOrder order = inOrder(vaultRepository, folderRepository, fileRepository, backlinkRepository);
         order.verify(vaultRepository).persist(vaults.capture());
-        order.verify(folderRepository).persist(folders.capture());
+        order.verify(folderRepository).persistAllInAnyOrder(folders.capture());
         order.verify(fileRepository).persist(files.capture());
         order.verify(backlinkRepository).persist(backlinks.capture());
         order.verify(backlinkRepository).flush();
-        order.verify(entityManager).createNativeQuery(MigrationService.RUN_PARENT_CHECK);
-        verify(nativeQuery, times(2)).executeUpdate();
     }
 
     @Test
@@ -306,7 +291,7 @@ public class MigrationServiceTests {
 
     private void verifyInserted() {
         verify(vaultRepository).persist(vaults.capture());
-        verify(folderRepository).persist(folders.capture());
+        verify(folderRepository).persistAllInAnyOrder(folders.capture());
         verify(fileRepository).persist(files.capture());
         verify(backlinkRepository).persist(backlinks.capture());
     }

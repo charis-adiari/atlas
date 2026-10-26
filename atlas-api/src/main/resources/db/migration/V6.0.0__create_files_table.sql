@@ -37,3 +37,5 @@ CREATE TABLE files (
 CREATE INDEX idx_files_vault_folder ON files (vault_id, folder_id);
 -- Serves the folder_id cascade when a folder is deleted.
 CREATE INDEX idx_files_folder ON files (folder_id);
+
+-- rollback: DROP TABLE IF EXISTS files;

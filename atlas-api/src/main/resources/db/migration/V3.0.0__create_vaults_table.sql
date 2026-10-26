@@ -19,3 +19,5 @@ CREATE TABLE vaults (
 );
 
 CREATE INDEX idx_vaults_user_id ON vaults (user_id);
+
+-- rollback: DROP TABLE IF EXISTS vaults;

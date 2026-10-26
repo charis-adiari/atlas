@@ -14,7 +14,6 @@ import com.musketeers.repository.vault.FileRepository;
 import com.musketeers.repository.vault.FolderRepository;
 import com.musketeers.repository.vault.VaultRepository;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
@@ -34,8 +33,6 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class MigrationService {
     public static final String UNVERIFIED_EMAIL_MESSAGE = "Verify your email address before migrating data.";
-    public static final String DEFER_PARENT_CHECK = "SET CONSTRAINTS fk_folders_parent DEFERRED";
-    public static final String RUN_PARENT_CHECK = "SET CONSTRAINTS fk_folders_parent IMMEDIATE";
     public static final String NOT_SAVED_MESSAGE = "The data could not be saved. Some of it may already have been "
             + "migrated.";
 
@@ -46,7 +43,6 @@ public class MigrationService {
     private final BacklinkRepository backlinkRepository;
     private final MigrationPayloadChecker checker;
     private final MigrationMapper mapper;
-    private final EntityManager entityManager;
 
     public MigrationService(
             UserRepository userRepository,
@@ -55,8 +51,7 @@ public class MigrationService {
             FileRepository fileRepository,
             BacklinkRepository backlinkRepository,
             MigrationPayloadChecker checker,
-            MigrationMapper mapper,
-            EntityManager entityManager
+            MigrationMapper mapper
     ) {
         this.userRepository = userRepository;
         this.vaultRepository = vaultRepository;
@@ -65,7 +60,6 @@ public class MigrationService {
         this.backlinkRepository = backlinkRepository;
         this.checker = checker;
         this.mapper = mapper;
-        this.entityManager = entityManager;
     }
 
     /**
@@ -111,35 +105,17 @@ public class MigrationService {
      */
     private void insert(List<Vault> vaults, List<Folder> folders, List<VaultFile> files, List<Backlink> backlinks) {
         try {
-            deferParentCheck();
             vaultRepository.persist(vaults);
-            folderRepository.persist(folders);
+            folderRepository.persistAllInAnyOrder(folders);
             fileRepository.persist(files);
             backlinkRepository.persist(backlinks);
             backlinkRepository.flush();
-            runParentCheck();
         } catch (PersistenceException e) {
             if (e instanceof ConstraintViolationException || e.getCause() instanceof ConstraintViolationException) {
                 throw new IllegalArgumentException(NOT_SAVED_MESSAGE);
             }
             throw e;
         }
-    }
-
-    /**
-     * Postpones the check that a folder's parent exists until {@link #runParentCheck} is called, for the rest of the
-     * current transaction. This lets folders be inserted in any order, a child before its parent.
-     */
-    private void deferParentCheck() {
-        entityManager.createNativeQuery(DEFER_PARENT_CHECK).executeUpdate();
-    }
-
-    /**
-     * Runs the postponed parent check now, so a missing parent fails inside the migration instead of when the
-     * transaction commits. Pending inserts must be flushed first.
-     */
-    private void runParentCheck() {
-        entityManager.createNativeQuery(RUN_PARENT_CHECK).executeUpdate();
     }
 
     /**

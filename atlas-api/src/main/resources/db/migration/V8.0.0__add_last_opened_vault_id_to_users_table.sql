@@ -17,3 +17,5 @@ ALTER TABLE users
 
 -- Serves the SET NULL when a vault is deleted (otherwise Postgres scans users).
 CREATE INDEX idx_users_last_opened_vault_id ON users (last_opened_vault_id);
+
+-- rollback: DROP INDEX IF EXISTS idx_users_last_opened_vault_id; ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_last_opened_vault, DROP COLUMN IF EXISTS last_opened_vault_id;

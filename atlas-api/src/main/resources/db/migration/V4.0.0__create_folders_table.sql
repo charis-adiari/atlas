@@ -33,3 +33,5 @@ CREATE TABLE folders (
 CREATE INDEX idx_folders_vault_parent ON folders (vault_id, parent_folder_id);
 -- Serves the parent_folder_id cascade when a folder is deleted.
 CREATE INDEX idx_folders_parent ON folders (parent_folder_id);
+
+-- rollback: DROP TABLE IF EXISTS folders;

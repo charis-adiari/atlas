@@ -11,3 +11,5 @@ CREATE TABLE file_types (
 INSERT INTO file_types (code, description) VALUES
     ('NOTE', 'Note'),
     ('CANVAS', 'Canvas');
+
+-- rollback: DROP TABLE IF EXISTS file_types;

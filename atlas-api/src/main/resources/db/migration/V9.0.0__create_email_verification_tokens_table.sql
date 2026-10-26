@@ -21,3 +21,5 @@ CREATE TABLE email_verification_tokens (
 
 -- Serves the user_id cascade and the removal of a user's earlier tokens.
 CREATE INDEX idx_email_verification_tokens_user_id ON email_verification_tokens (user_id);
+
+-- rollback: DROP TABLE IF EXISTS email_verification_tokens;

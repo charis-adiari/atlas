@@ -20,3 +20,5 @@ CREATE TABLE users (
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT ck_users_email_normalised CHECK (email <> '' AND email = lower(btrim(email)))
 );
+
+-- rollback: DROP TABLE IF EXISTS users;
