@@ -110,7 +110,7 @@ public class MigrationService {
             backlinkRepository.flush();
             folderRepository.runParentCheck();
         } catch (PersistenceException e) {
-            if (e.getCause() instanceof ConstraintViolationException) {
+            if (e instanceof ConstraintViolationException || e.getCause() instanceof ConstraintViolationException) {
                 throw new IllegalArgumentException(NOT_SAVED_MESSAGE);
             }
             throw e;

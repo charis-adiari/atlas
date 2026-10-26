@@ -83,7 +83,7 @@ public class AuthService {
         try {
             repository.persistAndFlush(user);
         } catch (PersistenceException e) {
-            if (e.getCause() instanceof ConstraintViolationException) {
+            if (e instanceof ConstraintViolationException || e.getCause() instanceof ConstraintViolationException) {
                 throw new IllegalArgumentException(SIGNUP_FAILED_MESSAGE);
             }
             throw e;
