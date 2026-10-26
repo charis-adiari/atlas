@@ -20,61 +20,6 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Authentication
-
-The browser never holds the access token. The app's own server sits between the browser and the Atlas API (a backend-for-frontend), so the API's authentication is unchanged.
-
-- The browser only calls this app under `/api/v1/*` (one shared Axios client, `src/lib/api/httpClient.ts`). Route handlers in `src/app/api/v1/` and `src/server/` forward to the API.
-- On signup (and login, once the API has an endpoint) the server keeps the API's JWT in an **HttpOnly** cookie and tells the page only the user and the lifetime. The cookie is `SameSite=Lax`, covers the whole site, and lasts as long as the token (capped at a day). In production it is `Secure` and named with the `__Host-` prefix.
-- Protected API calls go through `/api/v1/[...path]`, which reads the cookie and sends the token to the API as a Bearer header. Nothing else from the browser is forwarded.
-- **CSRF:** every state-changing request must carry an `X-CSRF-Token` header equal to an HttpOnly CSRF cookie (double submit), and its `Origin` and `Sec-Fetch-Site` must be same-site. The client fetches the token from `GET /api/v1/auth/csrf` and retries once if the server has rotated it.
-- **Pages:** `src/proxy.ts` redirects anonymous visitors away from `/account`. The page also checks again on the client, so a session that ends while it is open sends the user home.
-- **Expiry:** the API's tokens last one hour (`app.auth.token-ttl`). When one expires the cookie goes with it, the page signs the user out by itself and shows a notice, and the next protected call answers 401. There are no refresh tokens: the API has none, and an hour is short enough to limit damage from a stolen cookie. Add them only if users must stay signed in longer.
-- **Errors:** expected failures (duplicate email, invalid details, lost connection) get a friendly message. Anything unexpected shows a generic message while the technical details go to `logUnexpectedError` (`src/lib/logging/logger.ts`), which writes to the console until `setErrorLogSink` points it at a monitoring service.
-
-Placeholders that are meant to be replaced:
-
-- Login: the server route exists (`/api/v1/auth/login`) but the API has no login endpoint yet, and there is no login screen.
-- Email verification: `src/lib/auth/verification/emailVerification.ts` is a replaceable provider. The default requires nothing, so signup is unchanged; plug in a provider with `setEmailVerificationProvider` and the "check your inbox" step appears.
-- The `/account` page and the log-out button are minimal stand-ins for the real account screens.
-- Local vault storage keeps only vaults so far (see below).
-
-## Configuration
-
-All settings are optional and read on the server unless noted.
-
-- `API_PROXY_TARGET` (default `http://localhost:8080`): where the Atlas API lives.
-- `NEXT_PUBLIC_API_BASE_URL` (default `/api/v1`, read in the browser): where the page sends its requests. Leave it alone: it points at this app's own server.
-- `APP_ORIGINS` (comma-separated, for example `https://atlas.example.com`): the origins allowed to make state-changing requests. Required behind a reverse proxy or load balancer that terminates TLS, because the app then sees an internal origin and would refuse every POST. Without it the request's own origin is used.
-- `COOKIE_SECURE`: cookies are `Secure` in production by default. Set `false` only for a production build served over plain HTTP, such as a local test.
-
-In production serve the app over HTTPS only. It sends `Strict-Transport-Security`, but redirecting HTTP to HTTPS is up to the proxy or host.
-
-## Local vault data and migration
-
-After a successful signup the UI looks for vault data kept on the device. If there is some, it asks whether to migrate it. The data comes from two places:
-
-- The local vault store (`src/lib/storage`): an index under `atlas:meta` in `localStorage` (its `vaultIds`) and one entry per vault under `atlas:vaults:<id>`. Each vault's id, name and creation time are uploaded. A vault without a name cannot be uploaded and is left out. The store does not keep folders, files or backlinks yet, so for now only vaults are migrated from here.
-- Key `atlas.local-vault-data` in `localStorage`, holding JSON with four flat lists: `vaults`, `folders`, `files` and `backlinks`. The fields are those of the API's migration payload (`src/types/migration.ts`). Nothing writes it yet. It is the contract to use for folders, files and backlinks until the store keeps them, and `src/lib/migration/local/localVaultData.ts` is the one file to change then. If both name the same vault, this key wins.
-
-Rules for both:
-
-- Ids are UUIDs. Timestamps are ISO-8601 strings, and epoch milliseconds, as a number or as digits in a string, are converted. Every record needs a creation time, because the API refuses an upload without one.
-- Only the fields the API knows are uploaded; anything else stored alongside them is ignored.
-- The upload is one all-or-nothing request to `POST /api/v1/vaults/migrate`. It is tried up to 3 times, pausing 1s and then 2s, when the server cannot be reached or has a problem. After that the user can retry or continue without migrating.
-- Local data is never deleted. Once the API confirms the upload, the migrated vault ids are recorded under `atlas.local-vault-data.migrated`, so those vaults are not offered again. Vaults created later are still offered.
-
-## Testing
-
-```bash
-npm test
-npm run test:coverage
-```
-
-The acceptance criteria of US-02 (signup, migration prompt, confirm, decline, failed signup, network failure during migration), logout and token expiry are tested end to end in `src/components/account/AuthEntry.acceptance.test.tsx`. They run the real UI against an in-memory fake of the API as the browser sees it (`src/test/FakeAtlasApi.ts`), which models the cookie session, enforces the CSRF header, follows the API's rules and can simulate a failing network.
-
-The server side (cookies, CSRF, the authenticated proxy, the protected-route guard) is tested in `src/server` and `src/proxy.test.ts` against a mocked API.
-
 ## Code Style Guide
 
 This extends the [root style guide](../README.md#code-style-guide). Rules here apply only within the UI subfolder.
