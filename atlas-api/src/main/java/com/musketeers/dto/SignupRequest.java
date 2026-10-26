@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Represent a signup request. The password needs 8 or more characters with an upper-case letter, a lower-case letter,
- * a digit and a special character, and at most 72, because bcrypt ignores anything beyond that.
+ * a digit and a special character, and at most 72 bytes in UTF-8, because bcrypt ignores anything beyond that.
  * @param email Email address of the new account
  * @param password Plain-text password, never logged
  */
@@ -18,7 +18,8 @@ public record SignupRequest(
         String email,
 
         @NotBlank(message = "Password is required")
-        @Size(max = 72, message = "Password must be at most 72 characters")
+        @MaxUtf8Bytes(value = 72, message = "Password is too long (at most 72 bytes; accented and other non-English "
+                + "characters count as more than one)")
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$",
                 message = "Password must be 8+ chars with upper, lower, digit and special character")
