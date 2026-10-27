@@ -102,8 +102,8 @@ Pick standards by changed path:
 
 | Changed files under | Standards file (path in repo) |
 | --- | --- |
-| `atlas-api/` | `../../backend.instructions.md` |
-| `atlas-ui/` | `../../frontend.instructions.md` |
+| `atlas-api/` | [../../instructions/backend.instructions.md](../../instructions/backend.instructions.md) |
+| `atlas-ui/` | [../../instructions/frontend.instructions.md](../../instructions/frontend.instructions.md) |
 | Anything else | None; apply general best practices and say so in the review |
 
 Fetch each applicable file at the base branch:
