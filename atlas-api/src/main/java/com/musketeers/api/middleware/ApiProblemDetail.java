@@ -8,7 +8,8 @@ import java.util.Map;
 /**
  * Minimal Problem Details (RFC 9457) shape: just status, title and detail. Used instead of HttpProblem directly, since
  * HttpProblem auto-populates additional fields (e.g. "instance") that we don't want surfaced here. Validation
- * failures additionally carry one message per field in "errors", which is left out of the response when empty.
+ * failures additionally carry one message per field in "errors", and problems the client must react to in a particular
+ * way carry a machine-readable "code". Both are left out of the response when empty.
  */
 public final class ApiProblemDetail {
     @SuppressWarnings("unused")
@@ -19,16 +20,22 @@ public final class ApiProblemDetail {
     }
 
     public ApiProblemDetail(int statusCode, String title, String detail, Map<String, String> errors) {
+        this(statusCode, title, detail, errors, null);
+    }
+
+    public ApiProblemDetail(int statusCode, String title, String detail, Map<String, String> errors, String code) {
         this.statusCode = statusCode;
         this.title = title;
         this.detail = detail;
         this.errors = errors;
+        this.code = code;
     }
 
     private int statusCode;
     private String title;
     private String detail;
     private Map<String, String> errors;
+    private String code;
 
     public int getStatusCode() {
         return statusCode;
@@ -45,6 +52,11 @@ public final class ApiProblemDetail {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public Map<String, String> getErrors() {
         return errors;
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public String getCode() {
+        return code;
     }
 
     /**
@@ -78,6 +90,15 @@ public final class ApiProblemDetail {
      */
     public static ApiProblemDetail forbidden(String detail) {
         return build(Response.Status.FORBIDDEN, "Forbidden", detail);
+    }
+
+    /**
+     * Creates a problem details with response status set to 403 - forbidden, with a code the client can act on
+     * @param detail A human-readable description of the problem
+     * @param code Machine-readable reason for the refusal
+     */
+    public static ApiProblemDetail forbidden(String detail, String code) {
+        return new ApiProblemDetail(Response.Status.FORBIDDEN.getStatusCode(), "Forbidden", detail, null, code);
     }
 
     /**

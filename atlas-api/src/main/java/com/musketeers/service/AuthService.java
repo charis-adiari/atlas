@@ -1,21 +1,25 @@
 package com.musketeers.service;
 
 import com.musketeers.domain.User;
+import com.musketeers.dto.AccessTokenResponse;
 import com.musketeers.dto.SignupResponse;
 import com.musketeers.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotAuthorizedException;
 import org.hibernate.exception.ConstraintViolationException;
 
 import java.util.Locale;
 
 /**
- * Operations for creating accounts and issuing access tokens
+ * Operations for creating accounts and issuing access tokens. An access token is only ever issued to a user whose
+ * email address is verified.
  */
 @ApplicationScoped
 public class AuthService {
     public static final String SIGNUP_FAILED_MESSAGE = "The account could not be created with the details provided.";
+    public static final String INVALID_CREDENTIALS_MESSAGE = "The email or password is incorrect.";
 
     private static final String TOKEN_TYPE = "Bearer";
 
@@ -37,7 +41,8 @@ public class AuthService {
     }
 
     /**
-     * Creates the account, emails a verification link and signs the new user in. The password must already be
+     * Creates the account and emails a verification link. The new user is not signed in: they get an access token once
+     * they open the link, through {@link #verifyEmail}. The password must already be
      * validated, which {@code SignupRequest} takes care of. The email is lower-cased here, because the users table only
      * accepts lower-case addresses.
      * <p>
@@ -64,7 +69,46 @@ public class AuthService {
 
         sendVerification(user);
 
-        return new SignupResponse(tokenService.issue(user), TOKEN_TYPE, tokenService.getTtlSeconds());
+        return new SignupResponse(SignupResponse.VERIFICATION_REQUIRED, normalizedEmail);
+    }
+
+    /**
+     * Verifies the email address the token was sent to and signs its owner in.
+     *
+     * @param token the token taken from the emailed link
+     * @return an access token for the verified user
+     * @throws IllegalArgumentException if the token is unknown, has been used or has expired
+     */
+    public AccessTokenResponse verifyEmail(String token) {
+        User user = emailVerificationService.verify(token);
+        return issueAccessToken(user);
+    }
+
+    /**
+     * Signs a user in. The password is checked before anything else, and an unknown address costs the same bcrypt
+     * work as a wrong password, so neither the response nor its timing reveals whether an account exists, or whether
+     * it is verified, to someone who does not know the password.
+     *
+     * @param email the address of the account, in any capitalisation
+     * @param password the plain-text password
+     * @return an access token for the user
+     * @throws NotAuthorizedException if no account uses the address or the password is wrong
+     * @throws EmailNotVerifiedException if the password is right but the address is not verified yet
+     */
+    public AccessTokenResponse login(String email, String password) {
+        User user = repository.findByEmailIgnoreCase(email.toLowerCase(Locale.ROOT));
+
+        if (!hasher.matches(password, user == null ? null : user.passwordHash)) {
+            throw new NotAuthorizedException(INVALID_CREDENTIALS_MESSAGE, TOKEN_TYPE);
+        }
+        if (user.emailVerifiedAt == null) {
+            throw new EmailNotVerifiedException();
+        }
+        return issueAccessToken(user);
+    }
+
+    private AccessTokenResponse issueAccessToken(User user) {
+        return new AccessTokenResponse(tokenService.issue(user), TOKEN_TYPE, tokenService.getTtlSeconds());
     }
 
     /**

@@ -5,6 +5,10 @@ app:
     token-ttl: PT1H
     bcrypt-cost: 12
     verification-token-lifetime: PT24H
+    resend-verification:
+      per-email-limit: 3
+      per-client-address-limit: 20
+      window: PT1H
 
 smallrye:
   jwt:

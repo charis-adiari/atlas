@@ -40,15 +40,21 @@ This project uses Java Quarkus.
 
 ## Email Verification
 
-Signup creates the account, emails a verification link and signs the user in. Until the link is opened, protected
-endpoints that store data (such as `POST /vaults/migrate`) answer 403. The link opens the page at
-`app.auth.verification-page-address` with `#token=...` added (a fragment, so the token never reaches a server log or a
-referrer header), and that page reads it in the browser, removes it from the address bar and sends it to
-`POST /api/v1/auth/verify-email`. The endpoints `POST /api/v1/auth/resend-verification` and
-`GET /api/v1/auth/verification-status` need the signed-in user's access token.
+Signup creates the account and emails a verification link, but does not sign the user in: no access token is issued
+until the address is verified. The link opens the page at `app.auth.verification-page-address` with `#token=...` added
+(a fragment, so the token never reaches a server log or a referrer header), and that page reads it in the browser,
+removes it from the address bar and sends it to `POST /api/v1/auth/verify-email`, which answers with an access token.
+`POST /api/v1/auth/login` answers 403 with `"code": "EMAIL_NOT_VERIFIED"` when the password is right but the address
+is not verified yet. `POST /api/v1/auth/resend-verification` takes `{ "email": "..." }`, needs no access token and
+always answers 202, so it does not reveal which addresses are registered. Endpoints that store data (such as
+`POST /vaults/migrate`) still check verification themselves.
 
 - In dev and test mode no email is really sent: Quarkus prints it to the console, so copy the link from there.
 - `app.auth.verification-token-lifetime` (default in `application.yml`: `PT24H`) is how long a link stays valid.
+- `app.auth.resend-verification.*` limits resend requests per email address (over the limit they are quietly dropped)
+  and per client IP address (over the limit they get 429) within a window. The counts are kept in memory, per
+  instance. Behind a reverse proxy, the client address is the proxy's unless forwarded headers are enabled
+  (`quarkus.http.proxy.*`).
 - Neither setting has a default in code, so the app refuses to start when one is missing.
 - In production set these environment variables: `VERIFICATION_PAGE_ADDRESS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`
   and `MAIL_PASSWORD`.
