@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HttpMock, TEST_CSRF_TOKEN, jsonReply, problemReply } from '@/test/HttpMock';
 import { ApiError } from './ApiError';
-import { fetchVerificationStatus, resendVerification, verifyEmail } from './authApi';
+import { isEmailNotVerified, resendVerification, signup, verifyEmail } from './authApi';
 
 const http = new HttpMock();
+const USER = { id: 'user-1', email: 'jd@example.com' };
 
 beforeEach(() => {
   http.install();
@@ -13,19 +14,48 @@ afterEach(() => {
   http.uninstall();
 });
 
-describe('verifyEmail', () => {
-  it('posts the token to the verify endpoint with the CSRF token', async () => {
+describe('signup', () => {
+  it('returns the address the verification link was sent to', async () => {
     // Arrange
-    http.handler.mockResolvedValue(jsonReply(204));
+    http.handler.mockResolvedValue(
+      jsonReply(201, { status: 'verification_required', email: 'jd@example.com' })
+    );
 
     // Act
-    await verifyEmail('abc');
+    const result = await signup({ email: 'jd@example.com', password: 'Valid-Passw0rd' });
+
+    // Assert
+    expect(result).toEqual({ status: 'verification_required', email: 'jd@example.com' });
+  });
+
+  it('fails when the answer cannot be understood', async () => {
+    // Arrange
+    http.handler.mockResolvedValue(jsonReply(201, { user: USER, expiresIn: 3600 }));
+
+    // Act
+    const error = await signup({ email: 'jd@example.com', password: 'x' }).catch(
+      (caught: unknown) => caught
+    );
+
+    // Assert
+    expect(error).toBeInstanceOf(ApiError);
+  });
+});
+
+describe('verifyEmail', () => {
+  it('posts the token to the verify endpoint with the CSRF token and returns the new session', async () => {
+    // Arrange
+    http.handler.mockResolvedValue(jsonReply(200, { user: USER, expiresIn: 3600 }));
+
+    // Act
+    const result = await verifyEmail('abc');
 
     // Assert
     const request = http.handler.mock.calls[0][0];
     expect(request.path).toBe('/auth/verify-email');
     expect(request.body).toEqual({ token: 'abc' });
     expect(request.headers['x-csrf-token']).toBe(TEST_CSRF_TOKEN);
+    expect(result).toEqual({ user: USER, expiresIn: 3600 });
   });
 
   it('fails with the API error when the token is refused', async () => {
@@ -42,38 +72,35 @@ describe('verifyEmail', () => {
 });
 
 describe('resendVerification', () => {
-  it('posts to the resend endpoint', async () => {
+  it('posts the address to the resend endpoint', async () => {
     // Arrange
-    http.handler.mockResolvedValue(jsonReply(204));
+    http.handler.mockResolvedValue(jsonReply(202));
 
     // Act
-    await resendVerification();
+    await resendVerification('jd@example.com');
 
     // Assert
-    expect(http.handler.mock.calls[0][0].path).toBe('/auth/resend-verification');
+    const request = http.handler.mock.calls[0][0];
+    expect(request.path).toBe('/auth/resend-verification');
+    expect(request.body).toEqual({ email: 'jd@example.com' });
   });
 });
 
-describe('fetchVerificationStatus', () => {
-  it.each([true, false])('returns %s when the API says so', async (isVerified) => {
+describe('isEmailNotVerified', () => {
+  it('recognises the refusal of an account whose address is not verified', () => {
     // Arrange
-    http.handler.mockResolvedValue(jsonReply(200, { isVerified }));
+    const error = new ApiError(403, 'Verify first.', {}, { code: 'EMAIL_NOT_VERIFIED' });
 
-    // Act
-    const result = await fetchVerificationStatus();
-
-    // Assert
-    expect(result).toBe(isVerified);
+    // Act & Assert
+    expect(isEmailNotVerified(error)).toBe(true);
   });
 
-  it('fails when the answer cannot be understood', async () => {
-    // Arrange
-    http.handler.mockResolvedValue(jsonReply(200, { something: 'else' }));
-
-    // Act
-    const error = await fetchVerificationStatus().catch((caught: unknown) => caught);
-
-    // Assert
-    expect(error).toBeInstanceOf(ApiError);
+  it.each([
+    new ApiError(403, 'Forbidden.', {}, { code: 'csrf_invalid' }),
+    new ApiError(401, 'Wrong password.', {}, { code: 'EMAIL_NOT_VERIFIED' }),
+    new Error('boom')
+  ])('ignores any other failure', (error) => {
+    // Act & Assert
+    expect(isEmailNotVerified(error)).toBe(false);
   });
 });

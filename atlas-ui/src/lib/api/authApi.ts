@@ -1,12 +1,14 @@
 import type {
   LoginRequest,
-  LoginResponse,
   SessionInfo,
+  SessionStart,
   SignupRequest,
   SignupResponse
 } from '@/types/auth';
 import { ApiError } from './ApiError';
 import { UNKNOWN_ERROR_MESSAGE, httpClient } from './httpClient';
+
+export const EMAIL_NOT_VERIFIED_CODE = 'EMAIL_NOT_VERIFIED';
 
 const SIGNUP_PATH = '/auth/signup';
 const LOGIN_PATH = '/auth/login';
@@ -14,29 +16,38 @@ const LOGOUT_PATH = '/auth/logout';
 const SESSION_PATH = '/auth/session';
 const VERIFY_EMAIL_PATH = '/auth/verify-email';
 const RESEND_VERIFICATION_PATH = '/auth/resend-verification';
-const VERIFICATION_STATUS_PATH = '/auth/verification-status';
 const UNAUTHORIZED_STATUS = 401;
+const FORBIDDEN_STATUS = 403;
+const VERIFICATION_REQUIRED = 'verification_required';
 
 /**
- * Creates an account and starts a session for it. The server stores the access token in an HttpOnly cookie.
+ * Creates an account and emails it a verification link. No session starts: the user is signed in once they open the
+ * link.
  *
  * @param request email and password of the new account
+ * @returns the address the link was sent to
  * @throws ApiError if the account could not be created
  */
 export async function signup(request: SignupRequest): Promise<SignupResponse> {
   const response = await httpClient.post<unknown>(SIGNUP_PATH, request, {
     canExpireSession: false
   });
-  return readSessionResponse(response.data, response.status);
+  const candidate = response.data as Partial<SignupResponse> | null;
+
+  if (candidate?.status === VERIFICATION_REQUIRED && typeof candidate.email === 'string') {
+    return { status: VERIFICATION_REQUIRED, email: candidate.email };
+  }
+  throw new ApiError(response.status, UNKNOWN_ERROR_MESSAGE);
 }
 
 /**
- * Starts a session for an existing account.
+ * Starts a session for an existing account. The server stores the access token in an HttpOnly cookie.
  *
  * @param request email and password of the account
- * @throws ApiError if the credentials were refused or the request failed
+ * @throws ApiError if the credentials were refused or the request failed; see {@link isEmailNotVerified} for an
+ *         account whose address is not verified yet
  */
-export async function login(request: LoginRequest): Promise<LoginResponse> {
+export async function login(request: LoginRequest): Promise<SessionStart> {
   const response = await httpClient.post<unknown>(LOGIN_PATH, request, {
     canExpireSession: false
   });
@@ -71,46 +82,49 @@ export async function fetchSession(): Promise<SessionInfo | null> {
 }
 
 /**
- * Verifies an email address with the token from the emailed link. It needs no session, because the link may be opened
- * on another device.
+ * Verifies an email address with the token from the emailed link and starts a session for its owner. It needs no
+ * session beforehand, because the link may be opened on another device.
  *
  * @param token the token taken from the verification link
  * @throws ApiError if the token is unknown, already used or expired, or the request failed
  */
-export async function verifyEmail(token: string): Promise<void> {
-  await httpClient.post(VERIFY_EMAIL_PATH, { token }, { canExpireSession: false });
+export async function verifyEmail(token: string): Promise<SessionStart> {
+  const response = await httpClient.post<unknown>(
+    VERIFY_EMAIL_PATH,
+    { token },
+    { canExpireSession: false }
+  );
+  return readSessionResponse(response.data, response.status);
 }
 
 /**
- * Asks the API to email the signed-in user a new verification link. The earlier link stops working.
+ * Asks the API to email a new verification link to the address. The earlier link stops working. The answer is the
+ * same whether or not the address belongs to an unverified account, so nothing is learned from it.
  *
- * @throws ApiError if the request failed
+ * @param email the address to send the link to
+ * @throws ApiError if the request failed, for example with 429 after too many requests
  */
-export async function resendVerification(): Promise<void> {
-  await httpClient.post(RESEND_VERIFICATION_PATH);
+export async function resendVerification(email: string): Promise<void> {
+  await httpClient.post(RESEND_VERIFICATION_PATH, { email }, { canExpireSession: false });
 }
 
 /**
- * Asks the API whether the signed-in user has verified their email address.
- *
- * @returns true once the emailed link has been opened
- * @throws ApiError if the request failed or the answer was not understood
+ * Tells whether a failed login was refused only because the account's address is not verified yet, in which case the
+ * password was right.
  */
-export async function fetchVerificationStatus(): Promise<boolean> {
-  const response = await httpClient.get<unknown>(VERIFICATION_STATUS_PATH);
-  const candidate = response.data as { isVerified?: unknown } | null;
-
-  if (typeof candidate?.isVerified === 'boolean') {
-    return candidate.isVerified;
-  }
-  throw new ApiError(response.status, UNKNOWN_ERROR_MESSAGE);
+export function isEmailNotVerified(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.statusCode === FORBIDDEN_STATUS &&
+    error.details.code === EMAIL_NOT_VERIFIED_CODE
+  );
 }
 
 /**
- * Checks that the body of a signup or login response has the user and the lifetime.
+ * Checks that the body of a login or verification response has the user and the lifetime.
  */
-function readSessionResponse(data: unknown, status: number): SignupResponse {
-  const candidate = data as Partial<SignupResponse> | null;
+function readSessionResponse(data: unknown, status: number): SessionStart {
+  const candidate = data as Partial<SessionStart> | null;
 
   if (isUser(candidate?.user) && typeof candidate.expiresIn === 'number') {
     return { user: candidate.user, expiresIn: candidate.expiresIn };
@@ -133,7 +147,7 @@ function readSessionInfo(data: unknown, status: number): SessionInfo {
 /**
  * Checks that a value looks like an account.
  */
-function isUser(value: unknown): value is SignupResponse['user'] {
-  const candidate = value as Partial<SignupResponse['user']> | null | undefined;
+function isUser(value: unknown): value is SessionStart['user'] {
+  const candidate = value as Partial<SessionStart['user']> | null | undefined;
   return typeof candidate?.id === 'string' && typeof candidate.email === 'string';
 }

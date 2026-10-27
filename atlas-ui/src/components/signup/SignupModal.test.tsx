@@ -17,8 +17,8 @@ const LOCAL_DATA_KEY = 'atlas.vaults';
 const LOCAL_DATA_VALUE = '[{"name":"Personal"}]';
 
 const SIGNUP_RESPONSE: SignupResponse = {
-  user: { id: 'user-1', email: VALID_EMAIL },
-  expiresIn: 3600
+  status: 'verification_required',
+  email: VALID_EMAIL
 };
 
 const http = new HttpMock();
@@ -176,7 +176,7 @@ describe('SignupModal submitting', () => {
     expect(request.body).toEqual({ email: VALID_EMAIL, password: VALID_PASSWORD });
   });
 
-  it('starts the session, keeps no token in the page, and reports success', async () => {
+  it('reports success without starting a session, because the email address must be verified first', async () => {
     // Arrange
     http.handler.mockResolvedValue(jsonReply(201, SIGNUP_RESPONSE));
     const { user, onSuccess } = renderModal();
@@ -187,8 +187,7 @@ describe('SignupModal submitting', () => {
 
     // Assert
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(SIGNUP_RESPONSE));
-    expect(getAuthState().status).toBe('authenticated');
-    expect(getAuthState().session?.user.email).toBe(VALID_EMAIL);
+    expect(getAuthState().session).toBeNull();
     expect(JSON.stringify({ ...window.localStorage })).not.toMatch(/token|jwt|session/i);
   });
 

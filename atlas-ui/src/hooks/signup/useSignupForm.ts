@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { signup } from '@/lib/api/authApi';
-import { beginSession } from '@/lib/auth/session/sessionService';
 import { describeSignupError, getSignupFieldErrors } from '@/lib/auth/signupErrors';
 import { normalizeEmail } from '@/lib/auth/validation/emailRules';
 import { logUnexpectedError } from '@/lib/logging/logger';
@@ -19,11 +18,10 @@ export interface UseSignupFormResult extends SignupFields {
 
 /**
  * Drives the signup form. The checks here only give feedback while typing; the API makes the real decision. A failed
- * signup shows its message and leaves the session untouched, so the user stays anonymous. A successful one starts the session, which the server
- * backs with an HttpOnly cookie. Only the email and password are sent; the confirmation never
- * leaves the browser.
+ * signup shows its message. Either way the user stays anonymous: a new account is only signed in once its emailed
+ * verification link is opened. Only the email and password are sent; the confirmation never leaves the browser.
  *
- * @param onSuccess called after the session has been stored
+ * @param onSuccess called once the account is created, with the address the verification link was sent to
  */
 export function useSignupForm(onSuccess: (response: SignupResponse) => void): UseSignupFormResult {
   const fields = useSignupFields();
@@ -45,7 +43,6 @@ export function useSignupForm(onSuccess: (response: SignupResponse) => void): Us
         email: normalizeEmail(fields.email),
         password: fields.password
       });
-      beginSession(response);
       onSuccess(response);
     } catch (error) {
       const description = describeSignupError(error);

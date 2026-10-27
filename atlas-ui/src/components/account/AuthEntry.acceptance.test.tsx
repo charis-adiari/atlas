@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAuthState, resetAuthState } from '@/lib/auth/session/authSessionStore';
 import { ACCOUNT_NOT_CREATED_MESSAGE, INVALID_DETAILS_MESSAGE } from '@/lib/auth/signupErrors';
+import { setEmailVerificationProvider } from '@/lib/auth/verification/emailVerification';
 import { setErrorLogSink } from '@/lib/logging/logger';
 import { LOCAL_VAULT_DATA_KEY, MIGRATION_RECORD_KEY } from '@/lib/migration/local/localVaultData';
 import { FakeAtlasApi } from '@/test/FakeAtlasApi';
@@ -20,6 +21,8 @@ const MIGRATE_PATH = '/vaults/migrate';
 const PROMPT_TITLE = 'Move your vaults to your account?';
 const BACKED_UP_TITLE = 'Your vaults are backed up';
 const INTERRUPTED_TITLE = 'Migration interrupted';
+const CHECK_INBOX_TITLE = 'Check your inbox';
+const CHECK_INTERVAL_MS = 3000;
 
 let api: FakeAtlasApi;
 
@@ -28,7 +31,7 @@ type User = ReturnType<typeof userEvent.setup>;
 /**
  * Opens the signup form from the header and submits the given credentials, as a person would.
  */
-async function createAccount(
+async function submitSignup(
   user: User,
   email = EMAIL,
   password = PASSWORD,
@@ -39,6 +42,17 @@ async function createAccount(
   await user.type(screen.getByLabelText('Password'), password);
   await user.type(screen.getByLabelText('Confirm password'), confirmation);
   await user.click(screen.getByRole('button', { name: 'Create account' }));
+}
+
+/**
+ * Signs up, then opens the emailed verification link in another tab of the same browser, as a person would, and waits
+ * for the page to notice the session that started.
+ */
+async function createAccount(user: User, email = EMAIL): Promise<void> {
+  await submitSignup(user, email);
+  await screen.findByRole('dialog', { name: CHECK_INBOX_TITLE });
+  api.openVerificationLink(email);
+  await advance(CHECK_INTERVAL_MS);
 }
 
 /**
@@ -62,6 +76,7 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   api = new FakeAtlasApi();
   api.install();
+  setEmailVerificationProvider(null);
 });
 
 afterEach(() => {
@@ -94,6 +109,22 @@ describe('US-02 AC1: valid signup creates an account', () => {
     });
     expect(getAuthState().session?.user).toEqual({ id: account?.id, email: EMAIL });
     expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
+  });
+
+  it('does not sign the user in until they open the emailed verification link', async () => {
+    // Arrange
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<AuthEntry />);
+
+    // Act
+    await submitSignup(user);
+
+    // Assert
+    expect(await screen.findByRole('dialog', { name: CHECK_INBOX_TITLE })).toHaveTextContent(EMAIL);
+    expect(api.findAccount(EMAIL)?.isVerified).toBe(false);
+    expect(api.getSessionUserId()).toBeNull();
+    expect(getAuthState().session).toBeNull();
+    expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
   });
 
   it('keeps the session in a cookie the page cannot read, and no token anywhere in the page', async () => {
@@ -268,7 +299,7 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     render(<AuthEntry />);
 
     // Act
-    await createAccount(user, '  JD@Example.com ');
+    await submitSignup(user, '  JD@Example.com ');
 
     // Assert
     const dialog = await screen.findByRole('dialog', { name: 'Create your account' });
@@ -289,7 +320,7 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     render(<AuthEntry />);
 
     // Act
-    await createAccount(user);
+    await submitSignup(user);
     await screen.findByRole('alert');
 
     // Assert
@@ -347,7 +378,7 @@ describe('US-02 step 3.1 / AC3: a failed signup shows an error and the user stay
     render(<AuthEntry />);
 
     // Act
-    await createAccount(user, EMAIL, 'Password1!');
+    await submitSignup(user, EMAIL, 'Password1!');
 
     // Assert
     const dialog = await screen.findByRole('dialog', { name: 'Create your account' });

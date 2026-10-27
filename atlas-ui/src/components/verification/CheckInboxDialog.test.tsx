@@ -9,7 +9,6 @@ const EMAIL = 'jd@example.com';
 
 function installProvider(overrides = {}) {
   const provider = {
-    isRequired: true,
     sendVerification: vi.fn().mockResolvedValue(undefined),
     checkVerified: vi.fn().mockResolvedValue(false),
     ...overrides

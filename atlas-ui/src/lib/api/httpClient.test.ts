@@ -239,9 +239,10 @@ describe('httpClient', () => {
 });
 
 describe('authApi', () => {
-  it('signs up through the app server and returns the user and lifetime, never a token', async () => {
+  it('signs up through the app server and returns the address the verification link went to, never a token', async () => {
     // Arrange
-    http.handler.mockResolvedValue(jsonReply(201, SESSION_BODY));
+    const created = { status: 'verification_required', email: 'jd@example.com' };
+    http.handler.mockResolvedValue(jsonReply(201, created));
 
     // Act
     const result = await signup({ email: 'jd@example.com', password: 'Passw0rd!' });
@@ -250,7 +251,7 @@ describe('authApi', () => {
     const request = http.handler.mock.calls[0][0];
     expect(request.path).toBe('/auth/signup');
     expect(request.body).toEqual({ email: 'jd@example.com', password: 'Passw0rd!' });
-    expect(result).toEqual(SESSION_BODY);
+    expect(result).toEqual(created);
     expect(result).not.toHaveProperty('accessToken');
   });
 

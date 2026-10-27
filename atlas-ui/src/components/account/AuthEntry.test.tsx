@@ -13,6 +13,7 @@ import { AuthEntry } from './AuthEntry';
 const EMAIL = 'jd@example.com';
 const PASSWORD = 'Valid-Passw0rd';
 const HOUR = 3_600_000;
+const CHECK_INTERVAL_MS = 3000;
 
 let api: FakeAtlasApi;
 
@@ -36,10 +37,21 @@ async function advance(milliseconds: number): Promise<void> {
   });
 }
 
+/**
+ * Signs up, opens the emailed link as if in another tab of the same browser, and waits for the page to notice.
+ */
+async function signUpAndVerify(user: User): Promise<void> {
+  await signUp(user);
+  await screen.findByRole('dialog', { name: 'Check your inbox' });
+  api.openVerificationLink(EMAIL);
+  await advance(CHECK_INTERVAL_MS);
+}
+
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   api = new FakeAtlasApi();
   api.install();
+  setEmailVerificationProvider(null);
 });
 
 afterEach(() => {
@@ -90,7 +102,7 @@ describe('AuthEntry for an anonymous visitor', () => {
     render(<AuthEntry />);
 
     // Act
-    await signUp(user);
+    await signUpAndVerify(user);
 
     // Assert
     expect(await screen.findByRole('img', { name: `Signed in as ${EMAIL}` })).toHaveTextContent(
@@ -123,7 +135,7 @@ describe('AuthEntry for an anonymous visitor', () => {
     // Arrange
     const user = newUser();
     render(<AuthEntry />);
-    await signUp(user);
+    await signUpAndVerify(user);
     await screen.findByRole('status');
 
     // Act
@@ -205,7 +217,7 @@ describe('AuthEntry for a signed-in user', () => {
     api.setSessionSeconds(5);
     const user = newUser();
     render(<AuthEntry />);
-    await signUp(user);
+    await signUpAndVerify(user);
     await screen.findByText('Account created');
 
     // Act
@@ -222,7 +234,7 @@ describe('AuthEntry for a signed-in user', () => {
     api.setSessionSeconds(5);
     const user = newUser();
     render(<AuthEntry />);
-    await signUp(user);
+    await signUpAndVerify(user);
     await screen.findByText('Account created');
     await advance(5000);
     await screen.findByText('Session expired');
@@ -258,7 +270,7 @@ describe('AuthEntry migration', () => {
     render(<AuthEntry />);
 
     // Act
-    await signUp(user);
+    await signUpAndVerify(user);
 
     // Assert
     expect(await screen.findByRole('status')).toHaveTextContent(
@@ -274,7 +286,7 @@ describe('AuthEntry migration', () => {
     render(<AuthEntry />);
 
     // Act
-    await signUp(user);
+    await signUpAndVerify(user);
 
     // Assert
     expect(
@@ -289,7 +301,7 @@ describe('AuthEntry migration', () => {
     storeLocalVaultData(createLocalVaultData());
     const user = newUser();
     render(<AuthEntry />);
-    await signUp(user);
+    await signUpAndVerify(user);
 
     // Act
     await user.click(await screen.findByRole('button', { name: 'Keep on this device only' }));
@@ -307,7 +319,7 @@ describe('AuthEntry migration', () => {
     storeLocalVaultData(createLocalVaultData());
     const user = newUser();
     render(<AuthEntry />);
-    await signUp(user);
+    await signUpAndVerify(user);
 
     // Act
     await user.click(await screen.findByRole('button', { name: 'Migrate my vaults' }));
@@ -322,17 +334,8 @@ describe('AuthEntry migration', () => {
 });
 
 describe('AuthEntry email verification', () => {
-  function requireVerification(
-    sendVerification = vi.fn<(email: string) => Promise<void>>().mockResolvedValue(undefined)
-  ) {
-    const checkVerified = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
-    setEmailVerificationProvider({ isRequired: true, sendVerification, checkVerified });
-    return { sendVerification, checkVerified };
-  }
-
-  it('asks the user to check their inbox before anything else happens, without sending a second email', async () => {
+  it('asks the user to check their inbox, without signing them in or sending a second email', async () => {
     // Arrange
-    const provider = requireVerification();
     storeLocalVaultData(createLocalVaultData());
     const user = newUser();
     render(<AuthEntry />);
@@ -344,54 +347,68 @@ describe('AuthEntry email verification', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Check your inbox' });
     expect(dialog).toHaveTextContent(EMAIL);
     expect(dialog).toHaveTextContent("Your local vaults haven't been touched");
-    expect(provider.sendVerification).not.toHaveBeenCalled();
+    expect(api.countRequests('/auth/resend-verification')).toBe(0);
+    expect(api.getSessionUserId()).toBeNull();
+    expect(getAuthState().status).toBe('anonymous');
+    expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('dialog', { name: 'Move your vaults to your account?' })
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('carries on to the migration prompt once the address is verified', async () => {
+  it('keeps waiting while the link has not been opened', async () => {
     // Arrange
-    const provider = requireVerification();
-    storeLocalVaultData(createLocalVaultData());
     const user = newUser();
     render(<AuthEntry />);
     await signUp(user);
     await screen.findByRole('dialog', { name: 'Check your inbox' });
-    provider.checkVerified.mockResolvedValue(true);
 
     // Act
-    await advance(3000);
+    await advance(CHECK_INTERVAL_MS * 2);
+
+    // Assert
+    expect(screen.getByRole('dialog', { name: 'Check your inbox' })).toBeInTheDocument();
+    expect(getAuthState().status).toBe('anonymous');
+  });
+
+  it('signs the user in and carries on to the migration prompt once the link is opened', async () => {
+    // Arrange
+    storeLocalVaultData(createLocalVaultData());
+    const user = newUser();
+    render(<AuthEntry />);
+
+    // Act
+    await signUpAndVerify(user);
 
     // Assert
     expect(
       await screen.findByRole('dialog', { name: 'Move your vaults to your account?' })
     ).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Check your inbox' })).not.toBeInTheDocument();
+    expect(getAuthState().session?.user.email).toBe(EMAIL);
   });
 
-  it('goes straight to the confirmation once verified when there is no local data', async () => {
+  it('asks for a new link for the address the user signed up with', async () => {
     // Arrange
-    const provider = requireVerification();
     const user = newUser();
     render(<AuthEntry />);
     await signUp(user);
     await screen.findByRole('dialog', { name: 'Check your inbox' });
-    provider.checkVerified.mockResolvedValue(true);
+    const firstToken = api.getVerificationToken(EMAIL);
+    await advance(30_000);
 
     // Act
-    await advance(3000);
+    await user.click(await screen.findByRole('button', { name: 'Resend email' }));
 
     // Assert
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      "You're signed in and ready to go."
-    );
+    await waitFor(() => expect(api.countRequests('/auth/resend-verification')).toBe(1));
+    expect(api.requests.at(-1)?.body).toEqual({ email: EMAIL });
+    expect(api.getVerificationToken(EMAIL)).not.toBe(firstToken);
   });
 
-  it('signs out and reopens the signup form when the user wants a different email', async () => {
+  it('reopens the signup form when the user wants a different email, with nothing to sign out of', async () => {
     // Arrange
-    requireVerification();
     const user = newUser();
     render(<AuthEntry />);
     await signUp(user);
@@ -403,6 +420,6 @@ describe('AuthEntry email verification', () => {
     // Assert
     expect(await screen.findByRole('dialog', { name: 'Create your account' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Check your inbox' })).not.toBeInTheDocument();
-    await waitFor(() => expect(api.countRequests('/auth/logout')).toBe(1));
+    expect(api.countRequests('/auth/logout')).toBe(0);
   });
 });

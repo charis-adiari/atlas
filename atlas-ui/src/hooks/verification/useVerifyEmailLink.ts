@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api/ApiError';
 import { verifyEmail } from '@/lib/api/authApi';
+import { beginSession } from '@/lib/auth/session/sessionService';
 import { logUnexpectedError } from '@/lib/logging/logger';
 
 export type VerifyEmailLinkStatus = 'verifying' | 'verified' | 'failed';
@@ -24,16 +25,17 @@ function takeTokenFromAddress(): string | null {
 }
 
 /**
- * Sends the token to the API. A token the API does not accept is an expected outcome, anything else is logged.
+ * Sends the token to the API, which verifies the address and signs its owner in. A token the API does not accept is an
+ * expected outcome, anything else is logged.
  *
- * @returns true if the email address is now verified
+ * @returns true if the email address is now verified and the user signed in
  */
 async function verifyToken(token: string | null): Promise<boolean> {
   if (token === null) {
     return false;
   }
   try {
-    await verifyEmail(token);
+    beginSession(await verifyEmail(token));
     return true;
   } catch (error) {
     const isRefused = error instanceof ApiError && error.statusCode === BAD_REQUEST_STATUS;

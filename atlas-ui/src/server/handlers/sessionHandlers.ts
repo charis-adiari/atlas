@@ -14,6 +14,7 @@ import {
   rejectInvalidCsrf
 } from '@/server/security/csrf';
 import { NO_STORE_HEADERS, problemResponse } from '@/server/security/problem';
+import type { AxiosResponse } from 'axios';
 import { callUpstream, forwardResponse, upstreamUrl } from './upstream';
 
 export const MAX_AUTH_BODY_BYTES = 64 * 1024;
@@ -28,17 +29,18 @@ interface IssuedToken {
 }
 
 /**
- * Handles a signup: passes it to the API and, when the account is created, keeps the access token in an HttpOnly cookie
- * instead of giving it to the page. The API only sends the token, so who signed in is read from the token's claims.
- * The page is told who signed in and for how long.
+ * Handles a signup by passing it to the API and its answer back unchanged. A new account is not signed in, so no
+ * session cookie is set: the API answers with the address the verification link was sent to.
  */
-export function handleSignup(request: NextRequest): Promise<NextResponse> {
-  return establishSession(request, '/auth/signup');
+export async function handleSignup(request: NextRequest): Promise<NextResponse> {
+  const upstream = await postToApi(request, '/auth/signup');
+  return upstream instanceof NextResponse ? upstream : forwardResponse(upstream);
 }
 
 /**
- * Handles a login the same way as a signup. The API does not offer a login endpoint yet; this is ready for when it does
- * and answers with the API's own error until then.
+ * Handles a login: passes it to the API and, when the credentials are accepted, keeps the access token in an HttpOnly
+ * cookie instead of giving it to the page. A refusal is passed on unchanged, including the 403 with code
+ * EMAIL_NOT_VERIFIED for an account whose address is not verified yet.
  */
 export function handleLogin(request: NextRequest): Promise<NextResponse> {
   return establishSession(request, '/auth/login');
@@ -94,9 +96,30 @@ export function handleCsrf(request: NextRequest): NextResponse {
 }
 
 /**
- * Forwards a signup or login to the API and turns a successful answer into a session cookie.
+ * Forwards a request that answers with an access token, such as a login or an email verification, and turns a
+ * successful answer into a session cookie. The API only sends the token, so who signed in is read from its claims.
  */
-async function establishSession(request: NextRequest, path: string): Promise<NextResponse> {
+export async function establishSession(request: NextRequest, path: string): Promise<NextResponse> {
+  const upstream = await postToApi(request, path);
+  if (upstream instanceof NextResponse) {
+    return upstream;
+  }
+  if (upstream.status < FIRST_SUCCESS_STATUS || upstream.status >= FIRST_NON_SUCCESS_STATUS) {
+    return forwardResponse(upstream);
+  }
+  return sessionResponse(upstream.data);
+}
+
+/**
+ * Checks the CSRF token and the body size of a request that needs no session, then passes its body to the API.
+ *
+ * @returns the API's answer, or the response to send instead when the request was refused or the API could not be
+ *          reached
+ */
+export async function postToApi(
+  request: NextRequest,
+  path: string
+): Promise<AxiosResponse<string> | NextResponse> {
   const rejection = rejectInvalidCsrf(request);
   if (rejection !== null) {
     return rejection;
@@ -112,13 +135,7 @@ async function establishSession(request: NextRequest, path: string): Promise<Nex
     data: body,
     headers: forwardedHeaders(request)
   });
-  if (upstream === null) {
-    return problemResponse(502, 'The service is temporarily unavailable.');
-  }
-  if (upstream.status < FIRST_SUCCESS_STATUS || upstream.status >= FIRST_NON_SUCCESS_STATUS) {
-    return forwardResponse(upstream);
-  }
-  return sessionResponse(upstream.data);
+  return upstream ?? problemResponse(502, 'The service is temporarily unavailable.');
 }
 
 /**
@@ -139,7 +156,7 @@ function sessionResponse(upstreamBody: string): NextResponse {
 
   const response = NextResponse.json(
     { user: { id: claims.userId, email: claims.email }, expiresIn: issued.expiresIn },
-    { status: 201, headers: NO_STORE_HEADERS }
+    { headers: NO_STORE_HEADERS }
   );
   setSessionCookie(response, issued.accessToken, issued.expiresIn);
   setCsrfCookie(response, generateCsrfToken());

@@ -1,6 +1,6 @@
 import { fetchSession, logout } from '@/lib/api/authApi';
 import { resetCsrfToken, setUnauthorizedHandler } from '@/lib/api/httpClient';
-import type { LoginResponse, SignupResponse } from '@/types/auth';
+import type { SessionStart } from '@/types/auth';
 import { claimSessionRestore, endSession, getAuthState, startSession } from './authSessionStore';
 
 const MILLIS_PER_SECOND = 1000;
@@ -12,12 +12,30 @@ setUnauthorizedHandler(() => {
 });
 
 /**
- * Marks the user as signed in after the server accepted a signup or login. The server has already stored the access
- * token in a cookie and replaced the CSRF token, so the page only keeps who signed in and until when.
+ * Marks the user as signed in after the server accepted a login or an email verification. The server has already
+ * stored the access token in a cookie and replaced the CSRF token, so the page only keeps who signed in and until when.
  */
-export function beginSession(response: SignupResponse | LoginResponse): void {
+export function beginSession(response: SessionStart): void {
   resetCsrfToken();
   startSession(response.user, Date.now() + response.expiresIn * MILLIS_PER_SECOND);
+}
+
+/**
+ * Asks the server again whether the browser has a session cookie and, if it has, marks the user as signed in. This is
+ * how a page learns that another tab started a session, for example by opening the emailed verification link. The CSRF
+ * token is fetched again too, because starting a session replaces it.
+ *
+ * @returns true if there is a session
+ * @throws ApiError if the request failed for any reason other than there being no session
+ */
+export async function refreshSession(): Promise<boolean> {
+  const session = await fetchSession();
+  if (session === null) {
+    return false;
+  }
+  resetCsrfToken();
+  startSession(session.user, session.expiresAt);
+  return true;
 }
 
 /**

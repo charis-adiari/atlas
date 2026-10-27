@@ -1,5 +1,5 @@
 import { ALREADY_MIGRATED_MESSAGE } from '@/lib/api/migrationApi';
-import type { SignupRequest } from '@/types/auth';
+import type { LoginRequest, SignupRequest } from '@/types/auth';
 import type { MigrationRequest } from '@/types/migration';
 import { HttpMock, jsonReply, problemReply, type MockReply, type MockRequest } from './HttpMock';
 
@@ -11,6 +11,8 @@ const MILLIS_PER_SECOND = 1000;
 
 export const ACCOUNT_REFUSED_DETAIL = 'The account could not be created with the details provided.';
 export const INVALID_LINK_DETAIL = 'The verification link is invalid or has expired.';
+export const INVALID_CREDENTIALS_DETAIL = 'The email or password is incorrect.';
+export const EMAIL_NOT_VERIFIED_DETAIL = 'Verify your email address before signing in.';
 
 export type MigrationFault = 'network-error' | 'server-error' | 'lost-response';
 
@@ -38,8 +40,9 @@ export interface RecordedRequest {
  * Stands in for the Atlas API as the browser sees it, that is, through this app's own server. It follows the real rules
  * for the endpoints the signup flow uses: the same password rules, one account per normalised email, a session that the
  * browser keeps in a cookie the page cannot read, and a migration that stores everything or nothing and refuses data whose
- * ids already exist, answering with an empty body. Like the real API it emails a verification link at signup, refuses
- * migrations from unverified accounts when asked to, and gives a duplicate email the same vague refusal as any other
+ * ids already exist, answering with an empty body. Like the real API it emails a verification link at signup without
+ * starting a session, starts one only when the link is opened or a verified account logs in, answers a resend the same
+ * way whether or not the address has an account, and gives a duplicate email the same vague refusal as any other
  * unusable details. Faults can be queued to simulate a network that fails partway through, and the session can be
  * expired to simulate the cookie running out.
  */
@@ -52,7 +55,6 @@ export class FakeAtlasApi {
   private readonly migrationFaults: MigrationFault[] = [];
   private readonly rejectedPasswords = new Set<string>();
   private readonly verificationTokens = new Map<string, string>();
-  private isVerificationEnforced = false;
   private sessionUserId: string | null = null;
   private sessionSeconds = DEFAULT_SESSION_SECONDS;
 
@@ -96,18 +98,23 @@ export class FakeAtlasApi {
   }
 
   /**
-   * Makes migrations from accounts that have not verified their email address fail with a 403, as the real API does.
-   */
-  enforceVerification(): void {
-    this.isVerificationEnforced = true;
-  }
-
-  /**
    * Gets the token in the most recent verification link emailed to an account, or undefined if none was sent.
    */
   getVerificationToken(email: string): string | undefined {
     const userId = this.findAccount(email)?.id;
     return [...this.verificationTokens].find(([, owner]) => owner === userId)?.[0];
+  }
+
+  /**
+   * Opens the latest link emailed to an account, as the person would in another tab of the same browser: the account
+   * is verified and the browser gets a session cookie, which every tab shares.
+   */
+  openVerificationLink(email: string): void {
+    const token = this.getVerificationToken(email);
+    if (token === undefined) {
+      throw new Error(`No verification link was emailed to ${email}`);
+    }
+    this.verifyEmail(token);
   }
 
   /**
@@ -132,9 +139,11 @@ export class FakeAtlasApi {
   }
 
   /**
-   * Gives the browser a valid session cookie for an account, as if it had signed up or logged in earlier.
+   * Gives the browser a valid session cookie for an account, as if it had verified its address or logged in earlier.
+   * Only a verified account can have a session, so the account counts as verified from now on.
    */
   signInAs(account: FakeAccount): void {
+    account.isVerified = true;
     this.sessionUserId = account.id;
   }
 
@@ -201,10 +210,10 @@ export class FakeAtlasApi {
       return this.verifyEmail((request.body as { token: string }).token);
     }
     if (request.path === '/auth/resend-verification') {
-      return this.resendVerification();
+      return this.resendVerification((request.body as { email: string }).email);
     }
-    if (request.path === '/auth/verification-status') {
-      return this.verificationStatus();
+    if (request.path === '/auth/login') {
+      return this.login(request.body as LoginRequest);
     }
     if (request.path === '/auth/logout') {
       this.sessionUserId = null;
@@ -217,7 +226,7 @@ export class FakeAtlasApi {
   }
 
   /**
-   * Creates an account and starts a session for it, or explains why it cannot.
+   * Creates an account and emails it a verification link, or explains why it cannot. No session starts.
    */
   private signup(request: SignupRequest): MockReply {
     const email = request.email.trim().toLowerCase();
@@ -231,9 +240,32 @@ export class FakeAtlasApi {
     }
 
     const account = this.addAccount(email, request.password);
-    this.sessionUserId = account.id;
     this.issueVerificationToken(account.id);
-    return jsonReply(201, {
+    return jsonReply(201, { status: 'verification_required', email: account.email });
+  }
+
+  /**
+   * Starts a session for a verified account whose password is right. The password is checked first, so a wrong one
+   * gets the same answer whether or not the account exists or is verified.
+   */
+  private login(request: LoginRequest): MockReply {
+    const account = this.findAccount(request.email);
+
+    if (account?.password !== request.password) {
+      return problemReply(401, INVALID_CREDENTIALS_DETAIL);
+    }
+    if (!account.isVerified) {
+      return problemReply(403, EMAIL_NOT_VERIFIED_DETAIL, undefined, 'EMAIL_NOT_VERIFIED');
+    }
+    return this.startSession(account);
+  }
+
+  /**
+   * Gives the browser a session cookie for the account and answers with what the app's server tells the page.
+   */
+  private startSession(account: FakeAccount): MockReply {
+    this.sessionUserId = account.id;
+    return jsonReply(200, {
       user: { id: account.id, email: account.email },
       expiresIn: this.sessionSeconds
     });
@@ -252,7 +284,7 @@ export class FakeAtlasApi {
   }
 
   /**
-   * Verifies the account a token was issued for and uses the token up.
+   * Verifies the account a token was issued for, uses the token up and signs the account in.
    */
   private verifyEmail(token: string): MockReply {
     const userId = this.verificationTokens.get(token);
@@ -263,42 +295,20 @@ export class FakeAtlasApi {
     }
     account.isVerified = true;
     this.verificationTokens.delete(token);
-    return jsonReply(204);
+    return this.startSession(account);
   }
 
   /**
-   * Emails the signed-in account a new verification link, unless it is verified already.
+   * Emails a new verification link to the address if it belongs to an account that is not verified yet. The answer is
+   * the same either way.
    */
-  private resendVerification(): MockReply {
-    const account = this.signedInAccount();
+  private resendVerification(email: string): MockReply {
+    const account = this.findAccount(email);
 
-    if (account === undefined) {
-      return problemReply(401, 'Authentication is required.');
+    if (account !== undefined && !account.isVerified) {
+      this.issueVerificationToken(account.id);
     }
-    if (account.isVerified) {
-      return problemReply(400, 'This email address is already verified.');
-    }
-    this.issueVerificationToken(account.id);
-    return jsonReply(204);
-  }
-
-  /**
-   * Reports whether the signed-in account has verified its email address.
-   */
-  private verificationStatus(): MockReply {
-    const account = this.signedInAccount();
-
-    if (account === undefined) {
-      return problemReply(401, 'Authentication is required.');
-    }
-    return jsonReply(200, { isVerified: account.isVerified });
-  }
-
-  /**
-   * Finds the account the browser's session cookie belongs to.
-   */
-  private signedInAccount(): FakeAccount | undefined {
-    return [...this.accounts.values()].find((candidate) => candidate.id === this.sessionUserId);
+    return jsonReply(202);
   }
 
   /**
@@ -343,10 +353,6 @@ export class FakeAtlasApi {
   private migrate(payload: MigrationRequest): MockReply {
     if (this.sessionUserId === null) {
       return problemReply(401, 'Authentication is required.');
-    }
-
-    if (this.isVerificationEnforced && this.signedInAccount()?.isVerified !== true) {
-      return problemReply(403, 'Verify your email address before migrating data.');
     }
 
     const fault = this.migrationFaults.shift();

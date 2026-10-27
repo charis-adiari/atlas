@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react';
+import { useEffect, useEffectEvent, useId } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { ModalDialog } from '@/components/ui/ModalDialog';
@@ -17,7 +17,8 @@ interface CheckInboxDialogProps {
 const POLL_INTERVAL_MS = 3000;
 
 /**
- * Tells the user to open the verification link that was emailed to them and waits for it to be opened. They can ask for
+ * Tells the user to open the verification link that was emailed to them and waits for it to be opened, which signs them
+ * in; a link opened in another tab of this browser is noticed here too. They can ask for
  * another email once the countdown is over, or go back and use a different address. The dialog cannot be dismissed
  * otherwise, so the flow does not carry on before the address is verified.
  */
@@ -29,6 +30,9 @@ export function CheckInboxDialog({
 }: CheckInboxDialogProps) {
   const titleId = useId();
   const countdown = useResendCountdown();
+  // Noticing the link signs the user in, which re-renders the parent with a new callback. Reading it through an effect
+  // event keeps the check that noticed it from being cancelled by that re-render.
+  const notifyVerified = useEffectEvent(onVerified);
 
   useEffect(() => {
     let isCancelled = false;
@@ -36,7 +40,7 @@ export function CheckInboxDialog({
       try {
         const isVerified = await getEmailVerificationProvider().checkVerified();
         if (isVerified && !isCancelled) {
-          onVerified();
+          notifyVerified();
         }
       } catch (error) {
         logUnexpectedError('verification', error);
@@ -47,7 +51,7 @@ export function CheckInboxDialog({
       isCancelled = true;
       clearInterval(timer);
     };
-  }, [onVerified]);
+  }, []);
 
   async function resend(): Promise<void> {
     countdown.restart();
@@ -69,7 +73,7 @@ export function CheckInboxDialog({
         </h2>
         <p className={styles.text}>
           We sent a verification link to <strong>{email}</strong>. Open it to finish creating your
-          account.
+          account and sign in.
         </p>
       </div>
       <Button variant="secondary" isFullWidth disabled={!countdown.canResend} onClick={resend}>

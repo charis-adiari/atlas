@@ -37,77 +37,26 @@ afterEach(() => {
 });
 
 describe('handleSignup', () => {
-  it('keeps the access token in an HttpOnly cookie and tells the page only who signed in and for how long', async () => {
+  it('passes the API answer through unchanged and starts no session', async () => {
     // Arrange
-    upstream.reply(201, TOKEN_RESPONSE);
+    const created = { status: 'verification_required', email: 'jd@example.com' };
+    upstream.reply(201, created);
     const request = createTrustedRequest('/api/v1/auth/signup', { body: CREDENTIALS });
 
     // Act
     const response = await handleSignup(request);
 
     // Assert
-    const body = await response.json();
     expect(response.status).toBe(201);
-    expect(body).toEqual({ user: USER, expiresIn: 3600 });
-    expect(JSON.stringify(body)).not.toContain(TOKEN_RESPONSE.accessToken);
-    expect(response.cookies.get(getSessionCookieName())).toMatchObject({
-      value: TOKEN_RESPONSE.accessToken,
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 3600
-    });
-    expect(response.headers.get('cache-control')).toBe('no-store');
-  });
-
-  it('reads who signed in from the claims of the access token, because the API sends no user', async () => {
-    // Arrange
-    const accessToken = makeJwt({ sub: 'user-7', email: 'ada@example.com' });
-    upstream.reply(201, { accessToken, tokenType: 'Bearer', expiresIn: 3600 });
-    const request = createTrustedRequest('/api/v1/auth/signup', { body: CREDENTIALS });
-
-    // Act
-    const response = await handleSignup(request);
-
-    // Assert
-    expect(await response.json()).toEqual({
-      user: { id: 'user-7', email: 'ada@example.com' },
-      expiresIn: 3600
-    });
-  });
-
-  it('answers 502 and sets no cookie when the access token cannot be read', async () => {
-    // Arrange
-    silenceServerLog();
-    upstream.reply(201, { accessToken: 'not-a-token', tokenType: 'Bearer', expiresIn: 3600 });
-    const request = createTrustedRequest('/api/v1/auth/signup', { body: CREDENTIALS });
-
-    // Act
-    const response = await handleSignup(request);
-
-    // Assert
-    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual(created);
     expect(response.cookies.get(getSessionCookieName())).toBeUndefined();
-  });
-
-  it('replaces the CSRF token when a session starts', async () => {
-    // Arrange
-    upstream.reply(201, TOKEN_RESPONSE);
-    const request = createTrustedRequest('/api/v1/auth/signup', { body: CREDENTIALS });
-    const oldToken = request.cookies.get(getCsrfCookieName())?.value;
-
-    // Act
-    const response = await handleSignup(request);
-
-    // Assert
-    const newToken = response.cookies.get(getCsrfCookieName())?.value;
-    expect(newToken).toBeDefined();
-    expect(newToken).not.toBe(oldToken);
+    expect(response.cookies.get(getCsrfCookieName())).toBeUndefined();
+    expect(response.headers.get('cache-control')).toBe('no-store');
   });
 
   it('forwards the credentials to the API without any of the browser cookies', async () => {
     // Arrange
-    upstream.reply(201, TOKEN_RESPONSE);
+    upstream.reply(201, { status: 'verification_required', email: 'jd@example.com' });
     const request = createTrustedRequest('/api/v1/auth/signup', {
       body: CREDENTIALS,
       cookies: { [getSessionCookieName()]: 'stale-session' },
@@ -191,28 +140,10 @@ describe('handleSignup', () => {
       expect.objectContaining({ reason: 'ECONNREFUSED' })
     );
   });
-
-  it.each([
-    ['text that is not JSON', '<html></html>'],
-    ['a body without a token', JSON.stringify({ user: USER, expiresIn: 3600 })],
-    ['a body with an empty token', JSON.stringify({ ...TOKEN_RESPONSE, accessToken: '' })]
-  ])('answers 502 and sets no cookie when the API succeeds with %s', async (_description, body) => {
-    // Arrange
-    silenceServerLog();
-    upstream.reply(201, body);
-    const request = createTrustedRequest('/api/v1/auth/signup', { body: CREDENTIALS });
-
-    // Act
-    const response = await handleSignup(request);
-
-    // Assert
-    expect(response.status).toBe(502);
-    expect(response.cookies.get(getSessionCookieName())).toBeUndefined();
-  });
 });
 
 describe('handleLogin', () => {
-  it('starts a session the same way as a signup, through the API login endpoint', async () => {
+  it('keeps the access token in an HttpOnly cookie and tells the page only who signed in and for how long', async () => {
     // Arrange
     upstream.reply(200, TOKEN_RESPONSE);
     const request = createTrustedRequest('/api/v1/auth/login', { body: CREDENTIALS });
@@ -221,21 +152,101 @@ describe('handleLogin', () => {
     const response = await handleLogin(request);
 
     // Assert
+    const body = await response.json();
     expect(upstream.calls[0].url).toBe('http://localhost:8080/api/v1/auth/login');
-    expect(response.cookies.get(getSessionCookieName())?.value).toBe(TOKEN_RESPONSE.accessToken);
-    expect(await response.json()).toEqual({ user: USER, expiresIn: 3600 });
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ user: USER, expiresIn: 3600 });
+    expect(JSON.stringify(body)).not.toContain(TOKEN_RESPONSE.accessToken);
+    expect(response.cookies.get(getSessionCookieName())).toMatchObject({
+      value: TOKEN_RESPONSE.accessToken,
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 3600
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
   });
 
-  it("passes on the API's error until it has a login endpoint, with no session", async () => {
+  it('reads who signed in from the claims of the access token, because the API sends no user', async () => {
     // Arrange
-    upstream.reply(404, { statusCode: 404, title: 'Not Found', detail: 'Not found' });
+    const accessToken = makeJwt({ sub: 'user-7', email: 'ada@example.com' });
+    upstream.reply(200, { accessToken, tokenType: 'Bearer', expiresIn: 3600 });
     const request = createTrustedRequest('/api/v1/auth/login', { body: CREDENTIALS });
 
     // Act
     const response = await handleLogin(request);
 
     // Assert
-    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      user: { id: 'user-7', email: 'ada@example.com' },
+      expiresIn: 3600
+    });
+  });
+
+  it('replaces the CSRF token when a session starts', async () => {
+    // Arrange
+    upstream.reply(200, TOKEN_RESPONSE);
+    const request = createTrustedRequest('/api/v1/auth/login', { body: CREDENTIALS });
+    const oldToken = request.cookies.get(getCsrfCookieName())?.value;
+
+    // Act
+    const response = await handleLogin(request);
+
+    // Assert
+    const newToken = response.cookies.get(getCsrfCookieName())?.value;
+    expect(newToken).toBeDefined();
+    expect(newToken).not.toBe(oldToken);
+  });
+
+  it('passes on the refusal of an unverified account, with its code, and starts no session', async () => {
+    // Arrange
+    const problem = {
+      statusCode: 403,
+      title: 'Forbidden',
+      detail: 'Verify your email address before signing in.',
+      code: 'EMAIL_NOT_VERIFIED'
+    };
+    upstream.reply(403, problem);
+    const request = createTrustedRequest('/api/v1/auth/login', { body: CREDENTIALS });
+
+    // Act
+    const response = await handleLogin(request);
+
+    // Assert
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual(problem);
+    expect(response.cookies.get(getSessionCookieName())).toBeUndefined();
+  });
+
+  it('answers 502 and sets no cookie when the access token cannot be read', async () => {
+    // Arrange
+    silenceServerLog();
+    upstream.reply(200, { accessToken: 'not-a-token', tokenType: 'Bearer', expiresIn: 3600 });
+    const request = createTrustedRequest('/api/v1/auth/login', { body: CREDENTIALS });
+
+    // Act
+    const response = await handleLogin(request);
+
+    // Assert
+    expect(response.status).toBe(502);
+    expect(response.cookies.get(getSessionCookieName())).toBeUndefined();
+  });
+
+  it.each([
+    ['text that is not JSON', '<html></html>'],
+    ['a body without a token', JSON.stringify({ user: USER, expiresIn: 3600 })],
+    ['a body with an empty token', JSON.stringify({ ...TOKEN_RESPONSE, accessToken: '' })]
+  ])('answers 502 and sets no cookie when the API succeeds with %s', async (_description, body) => {
+    // Arrange
+    silenceServerLog();
+    upstream.reply(200, body);
+    const request = createTrustedRequest('/api/v1/auth/login', { body: CREDENTIALS });
+
+    // Act
+    const response = await handleLogin(request);
+
+    // Assert
+    expect(response.status).toBe(502);
     expect(response.cookies.get(getSessionCookieName())).toBeUndefined();
   });
 });

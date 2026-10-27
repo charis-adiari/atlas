@@ -1,34 +1,24 @@
-import { fetchVerificationStatus, resendVerification } from '@/lib/api/authApi';
+import { resendVerification } from '@/lib/api/authApi';
+import { refreshSession } from '@/lib/auth/session/sessionService';
 
 /**
  * Represents how email addresses get verified. Anything that can send a verification email and tell whether the link
  * was opened can be plugged in with setEmailVerificationProvider.
  */
 export interface EmailVerificationProvider {
-  isRequired: boolean;
   sendVerification: (email: string) => Promise<void>;
   checkVerified: () => Promise<boolean>;
 }
 
 /**
- * Provider that does not require verification: it reports every address as verified, so signup carries on without a
- * check. Useful for tests and for setups where the API does not verify addresses.
- */
-export const NO_EMAIL_VERIFICATION: EmailVerificationProvider = {
-  isRequired: false,
-  sendVerification: () => Promise.resolve(),
-  checkVerified: () => Promise.resolve(true)
-};
-
-/**
  * Provider backed by the API. The API emails the first verification link when the account is created, so this only
- * has to send another one when the user asks. The email address is not passed on, because the API uses the account of
- * the signed-in user.
+ * has to send another one when the user asks. Opening the link signs the user in, and the session cookie it sets is
+ * shared by every tab of the browser, so the link counts as opened here once this browser has a session. A link opened
+ * on another device is not noticed; the user signs in there instead.
  */
 export const API_EMAIL_VERIFICATION: EmailVerificationProvider = {
-  isRequired: true,
-  sendVerification: () => resendVerification(),
-  checkVerified: () => fetchVerificationStatus()
+  sendVerification: (email) => resendVerification(email),
+  checkVerified: () => refreshSession()
 };
 
 let current: EmailVerificationProvider = API_EMAIL_VERIFICATION;

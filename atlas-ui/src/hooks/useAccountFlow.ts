@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import type { MigrationResult } from '@/components/migration/MigrationFlow';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { signOut } from '@/lib/auth/session/sessionService';
-import { getEmailVerificationProvider } from '@/lib/auth/verification/emailVerification';
-import { logUnexpectedError } from '@/lib/logging/logger';
 import { readUnmigratedVaultData } from '@/lib/migration/local/localVaultData';
 import type { AuthSession } from '@/lib/auth/session/authSessionStore';
 import type { SignupResponse } from '@/types/auth';
@@ -46,8 +43,8 @@ export interface UseAccountFlowResult {
 }
 
 /**
- * Sequences what happens around signup: the form, the email verification step when one is required, the offer to
- * migrate local vaults, and the confirmations and notices. Which verification applies comes from the provider in use.
+ * Sequences what happens around signup: the form, the email verification step, which is what signs the new user in,
+ * the offer to migrate local vaults, and the confirmations and notices.
  */
 export function useAccountFlow(): UseAccountFlowResult {
   const { status, session, endReason } = useAuthSession();
@@ -73,20 +70,13 @@ export function useAccountFlow(): UseAccountFlowResult {
   function handleSignupSuccess(response: SignupResponse): void {
     setIsSignupOpen(false);
     setHasDismissedExpiry(false);
-    const provider = getEmailVerificationProvider();
-
-    if (!provider.isRequired) {
-      continueAfterSignup();
-      return;
-    }
     setHasLocalVaults(readUnmigratedVaultData() !== null);
-    setVerificationEmail(response.user.email);
+    setVerificationEmail(response.email);
   }
 
   function handleUseDifferentEmail(): void {
     setVerificationEmail(null);
     setIsSignupOpen(true);
-    signOut().catch((error: unknown) => logUnexpectedError('logout', error));
   }
 
   return {
