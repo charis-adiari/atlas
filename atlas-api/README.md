@@ -21,9 +21,9 @@ This project uses Java Quarkus.
 1. Fill in the actual values in `.env`. For the database password, any value will do for local dev.
 1. If you add a new environment variable, add its key (with a placeholder or blank value) to `.env.example` so others know it's needed.
 1. Create a key pair for the access tokens: the private key signs the access token issued once the email address is
-   verified (by `verify-email` and `login`) and the public key verifies it on protected endpoints. Both keys are read from environment variables, never from files, so nothing
-   secret is stored in the project. Every developer makes their own pair. Run this in Git Bash (Git for Windows ships
-   `openssl`) from any folder outside the project:
+   verified (by `verify-email` and `login`) and the public key verifies it on protected endpoints. Both keys are read
+   from environment variables, never from files, so nothing secret is stored in the project. Every developer makes
+   their own pair. Run this in Git Bash (Git for Windows ships `openssl`) from any folder outside the project:
 
    ```bash
    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out privateKey.pem
