@@ -1,13 +1,4 @@
 -- V7.0.0: backlinks. One row means "source file links to target file".
---
--- Both composite foreign keys include vault_id, so a link can only join two files of the same
--- vault, and that vault is stored on the row. UNIQUE (source_file_id, target_file_id) keeps one row
--- per pair however many times the source mentions the target. The surrogate id only exists to make
--- the table easy to map as an entity; the pair is the real identity, so the migration endpoint can
--- insert with ON CONFLICT (source_file_id, target_file_id) DO NOTHING.
---
--- Links to files that do not exist yet (dangling links) are not stored here.
--- Deleting either file deletes the backlink.
 
 CREATE TABLE backlinks (
     id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24,9 +15,7 @@ CREATE TABLE backlinks (
         REFERENCES files (id, vault_id) ON DELETE CASCADE
 );
 
--- "What links to this file?" The unique constraint above already covers lookups by source.
 CREATE INDEX idx_backlinks_target ON backlinks (target_file_id);
--- Serves the vault_id cascade.
 CREATE INDEX idx_backlinks_vault ON backlinks (vault_id);
 
 -- rollback: DROP TABLE IF EXISTS backlinks;
