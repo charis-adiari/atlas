@@ -20,8 +20,8 @@ This project uses Java Quarkus.
 
 1. Fill in the actual values in `.env`. For the database password, any value will do for local dev.
 1. If you add a new environment variable, add its key (with a placeholder or blank value) to `.env.example` so others know it's needed.
-1. Create a key pair for the access tokens: the private key signs the access token issued at signup and the public key
-   verifies it on protected endpoints. Both keys are read from environment variables, never from files, so nothing
+1. Create a key pair for the access tokens: the private key signs the access token issued once the email address is
+   verified (by `verify-email` and `login`) and the public key verifies it on protected endpoints. Both keys are read from environment variables, never from files, so nothing
    secret is stored in the project. Every developer makes their own pair. Run this in Git Bash (Git for Windows ships
    `openssl`) from any folder outside the project:
 
@@ -55,7 +55,8 @@ always answers 202, so it does not reveal which addresses are registered. Endpoi
   and per client IP address (over the limit they get 429) within a window. The counts are kept in memory, per
   instance. Behind a reverse proxy, the client address is the proxy's unless forwarded headers are enabled
   (`quarkus.http.proxy.*`).
-- Neither setting has a default in code, so the app refuses to start when one is missing.
+- Neither `app.auth.verification-token-lifetime` nor `app.auth.verification-page-address` has a default in code, so
+  the app refuses to start when one is missing.
 - In production set these environment variables: `VERIFICATION_PAGE_ADDRESS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`
   and `MAIL_PASSWORD`.
 
