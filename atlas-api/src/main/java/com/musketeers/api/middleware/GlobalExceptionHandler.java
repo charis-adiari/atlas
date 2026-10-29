@@ -1,6 +1,5 @@
 package com.musketeers.api.middleware;
 
-import com.musketeers.service.EmailNotVerifiedException;
 import io.quarkus.logging.Log;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.ws.rs.WebApplicationException;
@@ -20,7 +19,6 @@ public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
     @Override
     public Response toResponse(Exception exception) {
         ApiProblemDetail problem = switch (exception) {
-            case EmailNotVerifiedException e -> ApiProblemDetail.forbidden(e.getMessage(), EmailNotVerifiedException.CODE);
             case EntityNotFoundException e -> ApiProblemDetail.notFound(e.getMessage());
             case IllegalArgumentException e -> ApiProblemDetail.badRequest(e.getMessage());
             case WebApplicationException e -> new ApiProblemDetail(

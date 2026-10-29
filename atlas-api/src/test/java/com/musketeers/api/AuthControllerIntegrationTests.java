@@ -5,7 +5,6 @@ import com.musketeers.domain.User;
 import com.musketeers.repository.EmailVerificationTokenRepository;
 import com.musketeers.repository.UserRepository;
 import com.musketeers.service.AuthService;
-import com.musketeers.service.EmailNotVerifiedException;
 import com.musketeers.service.EmailVerificationService;
 import com.musketeers.service.ResendVerificationLimiter;
 import io.quarkus.elytron.security.common.BcryptUtil;
@@ -327,15 +326,14 @@ public class AuthControllerIntegrationTests {
     }
 
     @Test
-    void login_WhenPasswordIsRightButEmailIsUnverified_Returns403WithEmailNotVerifiedCode() {
+    void login_WhenPasswordIsRightButEmailIsUnverified_Returns400() {
         signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
 
         login(EMAIL, STRONG_PASSWORD).then()
-                .statusCode(403)
+                .statusCode(400)
                 .contentType(PROBLEM_JSON)
-                .body("statusCode", is(403))
-                .body("code", equalTo(EmailNotVerifiedException.CODE))
-                .body("detail", equalTo(EmailNotVerifiedException.MESSAGE))
+                .body("statusCode", is(400))
+                .body("detail", equalTo(AuthService.EMAIL_NOT_VERIFIED_MESSAGE))
                 .body("$", not(hasKey("accessToken")));
     }
 

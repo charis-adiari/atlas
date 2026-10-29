@@ -283,7 +283,7 @@ public class AuthServiceTests {
     }
 
     @Test
-    void login_WhenPasswordIsRightButEmailIsUnverified_ThrowsEmailNotVerifiedException() {
+    void login_WhenPasswordIsRightButEmailIsUnverified_ThrowsIllegalArgumentException() {
         // Arrange
         User user = verifiedUser();
         user.emailVerifiedAt = null;
@@ -291,7 +291,9 @@ public class AuthServiceTests {
         when(hasher.matches(PASSWORD, HASH)).thenReturn(true);
 
         // Act & Assert
-        assertThrows(EmailNotVerifiedException.class, () -> service.login(EMAIL, PASSWORD));
+        IllegalArgumentException exception =
+                assertThrows(IllegalArgumentException.class, () -> service.login(EMAIL, PASSWORD));
+        assertEquals(AuthService.EMAIL_NOT_VERIFIED_MESSAGE, exception.getMessage());
         verifyNoInteractions(tokenService);
     }
 

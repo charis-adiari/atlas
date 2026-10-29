@@ -20,6 +20,7 @@ import java.util.Locale;
 public class AuthService {
     public static final String SIGNUP_FAILED_MESSAGE = "The account could not be created with the details provided.";
     public static final String INVALID_CREDENTIALS_MESSAGE = "The email or password is incorrect.";
+    public static final String EMAIL_NOT_VERIFIED_MESSAGE = "Verify your email address before signing in.";
 
     private static final String TOKEN_TYPE = "Bearer";
 
@@ -93,7 +94,7 @@ public class AuthService {
      * @param password the plain-text password
      * @return an access token for the user
      * @throws NotAuthorizedException if no account uses the address or the password is wrong
-     * @throws EmailNotVerifiedException if the password is right but the address is not verified yet
+     * @throws IllegalArgumentException if the password is right but the address is not verified yet
      */
     public AccessTokenResponse login(String email, String password) {
         User user = repository.findByEmailIgnoreCase(email.toLowerCase(Locale.ROOT));
@@ -102,7 +103,7 @@ public class AuthService {
             throw new NotAuthorizedException(INVALID_CREDENTIALS_MESSAGE, TOKEN_TYPE);
         }
         if (user.emailVerifiedAt == null) {
-            throw new EmailNotVerifiedException();
+            throw new IllegalArgumentException(EMAIL_NOT_VERIFIED_MESSAGE);
         }
         return issueAccessToken(user);
     }
