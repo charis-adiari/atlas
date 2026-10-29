@@ -6,7 +6,7 @@ import com.musketeers.repository.EmailVerificationTokenRepository;
 import com.musketeers.repository.UserRepository;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
-import jakarta.persistence.EntityNotFoundException;
+import jakarta.ws.rs.WebApplicationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,6 +41,7 @@ public class EmailVerificationServiceTests {
     private static final Duration LIFETIME = Duration.ofHours(24);
     private static final String TOKEN = "token-from-the-link";
     private static final int HASH_LENGTH = 64;
+    private static final String CLIENT_ADDRESS = "203.0.113.7";
 
     @Mock
     EmailVerificationTokenRepository tokenRepository;
@@ -49,6 +51,9 @@ public class EmailVerificationServiceTests {
 
     @Mock
     Mailer mailer;
+
+    @Mock
+    ResendVerificationLimiter limiter;
 
     @Captor
     ArgumentCaptor<EmailVerificationToken> storedToken;
@@ -63,7 +68,8 @@ public class EmailVerificationServiceTests {
 
     @BeforeEach
     void createService() {
-        service = new EmailVerificationService(tokenRepository, userRepository, mailer, LIFETIME, PAGE_ADDRESS);
+        service = new EmailVerificationService(
+                tokenRepository, userRepository, mailer, limiter, LIFETIME, PAGE_ADDRESS);
     }
 
     @Test
@@ -147,9 +153,10 @@ public class EmailVerificationServiceTests {
         when(userRepository.findById(user.id)).thenReturn(user);
 
         // Act
-        service.verify(TOKEN);
+        User result = service.verify(TOKEN);
 
         // Assert
+        assertSame(user, result);
         assertNotNull(user.emailVerifiedAt);
         verify(tokenRepository).delete("id", stored.id);
         verify(tokenRepository).findByTokenHash(lookedUpHash.capture());
@@ -219,12 +226,14 @@ public class EmailVerificationServiceTests {
     void resend_SendsANewLinkAndReplacesTheEarlierToken() {
         // Arrange
         User user = user();
-        when(userRepository.findById(user.id)).thenReturn(user);
+        allowRequests();
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(user);
 
         // Act
-        service.resend(user.id);
+        service.resend("Ada@Example.COM", CLIENT_ADDRESS);
 
         // Assert
+        verify(limiter).tryAcquireForEmail(EMAIL);
         verify(tokenRepository).delete("userId", user.id);
         verify(tokenRepository).persist(storedToken.capture());
         verify(mailer).send(sentMail.capture());
@@ -232,66 +241,64 @@ public class EmailVerificationServiceTests {
     }
 
     @Test
-    void resend_WhenEmailIsAlreadyVerified_ThrowsIllegalArgumentException() {
+    void resend_WhenEmailIsAlreadyVerified_SendsNothingAndReportsNothing() {
         // Arrange
         User user = user();
         user.emailVerifiedAt = Instant.now();
-        when(userRepository.findById(user.id)).thenReturn(user);
+        allowRequests();
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(user);
 
         // Act
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.resend(user.id));
+        service.resend(EMAIL, CLIENT_ADDRESS);
 
         // Assert
-        assertEquals(EmailVerificationService.ALREADY_VERIFIED_MESSAGE, ex.getMessage());
         verifyNoInteractions(mailer, tokenRepository);
     }
 
     @Test
-    void resend_WhenTheUserNoLongerExists_ThrowsEntityNotFoundException() {
+    void resend_WhenNoAccountUsesTheEmail_SendsNothingAndReportsNothing() {
         // Arrange
-        UUID userId = UUID.randomUUID();
-        when(userRepository.findById(userId)).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(EntityNotFoundException.class, () -> service.resend(userId));
-        verify(mailer, never()).send(any(Mail.class));
-    }
-
-    @Test
-    void isVerified_WhenTheEmailWasVerified_ReturnsTrue() {
-        // Arrange
-        User user = user();
-        user.emailVerifiedAt = Instant.now();
-        when(userRepository.findById(user.id)).thenReturn(user);
+        allowRequests();
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(null);
 
         // Act
-        boolean result = service.isVerified(user.id);
+        service.resend(EMAIL, CLIENT_ADDRESS);
 
         // Assert
-        assertTrue(result);
+        verifyNoInteractions(mailer, tokenRepository);
     }
 
     @Test
-    void isVerified_WhenTheEmailWasNotVerified_ReturnsFalse() {
+    void resend_WhenTheEmailIsOverItsLimit_QuietlySendsNothing() {
         // Arrange
-        User user = user();
-        when(userRepository.findById(user.id)).thenReturn(user);
+        when(limiter.tryAcquireForClientAddress(CLIENT_ADDRESS)).thenReturn(true);
+        when(limiter.tryAcquireForEmail(EMAIL)).thenReturn(false);
 
         // Act
-        boolean result = service.isVerified(user.id);
+        service.resend(EMAIL, CLIENT_ADDRESS);
 
         // Assert
-        assertFalse(result);
+        verifyNoInteractions(userRepository, mailer, tokenRepository);
     }
 
     @Test
-    void isVerified_WhenTheUserNoLongerExists_ThrowsEntityNotFoundException() {
+    void resend_WhenTheClientIsOverItsLimit_ThrowsTooManyRequests() {
         // Arrange
-        UUID userId = UUID.randomUUID();
-        when(userRepository.findById(userId)).thenReturn(null);
+        when(limiter.tryAcquireForClientAddress(CLIENT_ADDRESS)).thenReturn(false);
 
-        // Act & Assert
-        assertThrows(EntityNotFoundException.class, () -> service.isVerified(userId));
+        // Act
+        WebApplicationException ex = assertThrows(
+                WebApplicationException.class, () -> service.resend(EMAIL, CLIENT_ADDRESS));
+
+        // Assert
+        assertEquals(429, ex.getResponse().getStatus());
+        verify(limiter, never()).tryAcquireForEmail(any());
+        verifyNoInteractions(userRepository, mailer, tokenRepository);
+    }
+
+    private void allowRequests() {
+        when(limiter.tryAcquireForClientAddress(CLIENT_ADDRESS)).thenReturn(true);
+        when(limiter.tryAcquireForEmail(EMAIL)).thenReturn(true);
     }
 
     private static User user() {

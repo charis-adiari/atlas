@@ -7,8 +7,9 @@ import com.musketeers.repository.UserRepository;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.nio.charset.StandardCharsets;
@@ -19,7 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
-import java.util.UUID;
+import java.util.Locale;
 
 /**
  * Proves that a user owns their email address. A random token is emailed as a link and only its hash is stored, so the
@@ -30,7 +31,7 @@ import java.util.UUID;
 @ApplicationScoped
 public class EmailVerificationService {
     public static final String INVALID_LINK_MESSAGE = "The verification link is invalid or has expired.";
-    public static final String ALREADY_VERIFIED_MESSAGE = "This email address is already verified.";
+    public static final String TOO_MANY_REQUESTS_MESSAGE = "Too many requests. Try again later.";
 
     private static final String SUBJECT = "Verify your email address for Atlas";
     private static final int TOKEN_BYTE_COUNT = 32;
@@ -39,6 +40,7 @@ public class EmailVerificationService {
     private final EmailVerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final Mailer mailer;
+    private final ResendVerificationLimiter limiter;
     private final Duration tokenLifetime;
     private final String pageAddress;
     private final SecureRandom random = new SecureRandom();
@@ -47,12 +49,14 @@ public class EmailVerificationService {
             EmailVerificationTokenRepository tokenRepository,
             UserRepository userRepository,
             Mailer mailer,
+            ResendVerificationLimiter limiter,
             @ConfigProperty(name = "app.auth.verification-token-lifetime") Duration tokenLifetime,
             @ConfigProperty(name = "app.auth.verification-page-address") String pageAddress
     ) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.mailer = mailer;
+        this.limiter = limiter;
         this.tokenLifetime = tokenLifetime;
         this.pageAddress = pageAddress;
     }
@@ -104,10 +108,11 @@ public class EmailVerificationService {
      * keeps the original verification time.
      *
      * @param token the token taken from the emailed link
+     * @return the user who is now verified
      * @throws IllegalArgumentException if the token is unknown, has been used or has expired
      */
     @Transactional
-    public void verify(String token) {
+    public User verify(String token) {
         EmailVerificationToken stored = tokenRepository.findByTokenHash(hash(token));
         if (stored == null || stored.expiresAt.isBefore(Instant.now())) {
             throw new IllegalArgumentException(INVALID_LINK_MESSAGE);
@@ -121,41 +126,34 @@ public class EmailVerificationService {
             user.emailVerifiedAt = Instant.now();
         }
         tokenRepository.delete("id", stored.id);
+        return user;
     }
 
     /**
-     * Emails the user a fresh verification link. The earlier link stops working.
+     * Emails a fresh verification link to the account that uses the address, if there is one and it is not verified
+     * yet. The earlier link stops working. Nothing tells the caller whether an email went out, so the endpoint cannot
+     * be used to find out which addresses are registered. Past the per-address limit the request is quietly dropped
+     * for the same reason; past the per-client limit it is refused, which reveals nothing about the address.
      *
-     * @param userId id of the signed-in user
-     * @throws EntityNotFoundException if the user no longer exists
-     * @throws IllegalArgumentException if the email address is already verified
+     * @param email the address to send the link to, in any capitalisation
+     * @param clientAddress IP address the request came from
+     * @throws WebApplicationException with status 429 if the client has made too many requests
      */
     @Transactional
-    public void resend(UUID userId) {
-        User user = userRepository.findById(userId);
-        if (user == null) {
-            throw new EntityNotFoundException("User not found");
+    public void resend(String email, String clientAddress) {
+        if (!limiter.tryAcquireForClientAddress(clientAddress)) {
+            throw new WebApplicationException(TOO_MANY_REQUESTS_MESSAGE, Response.Status.TOO_MANY_REQUESTS);
         }
-        if (user.emailVerifiedAt != null) {
-            throw new IllegalArgumentException(ALREADY_VERIFIED_MESSAGE);
+        String normalizedEmail = email.toLowerCase(Locale.ROOT);
+        if (!limiter.tryAcquireForEmail(normalizedEmail)) {
+            return;
         }
 
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (user == null || user.emailVerifiedAt != null) {
+            return;
+        }
         sendEmail(user, createToken(user));
-    }
-
-    /**
-     * Tells whether the user has verified their email address.
-     *
-     * @param userId id of the signed-in user
-     * @return true once the emailed link has been opened
-     * @throws EntityNotFoundException if the user no longer exists
-     */
-    public boolean isVerified(UUID userId) {
-        User user = userRepository.findById(userId);
-        if (user == null) {
-            throw new EntityNotFoundException("User not found");
-        }
-        return user.emailVerifiedAt != null;
     }
 
     /**

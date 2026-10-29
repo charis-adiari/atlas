@@ -193,7 +193,7 @@ public class MigrationServiceTests {
     }
 
     @Test
-    void migrate_PostponesTheParentCheckUntilEverythingIsFlushed() {
+    void migrate_InsertsVaultsBeforeFoldersAndFlushesEverything() {
         // Arrange
         when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
 
@@ -201,14 +201,12 @@ public class MigrationServiceTests {
         service.migrate(USER_ID, fullRequest());
 
         // Assert
-        InOrder order = inOrder(folderRepository, vaultRepository, fileRepository, backlinkRepository);
-        order.verify(folderRepository).deferParentCheck();
+        InOrder order = inOrder(vaultRepository, folderRepository, fileRepository, backlinkRepository);
         order.verify(vaultRepository).persist(vaults.capture());
-        order.verify(folderRepository).persist(folders.capture());
+        order.verify(folderRepository).persistAllInAnyOrder(folders.capture());
         order.verify(fileRepository).persist(files.capture());
         order.verify(backlinkRepository).persist(backlinks.capture());
         order.verify(backlinkRepository).flush();
-        order.verify(folderRepository).runParentCheck();
     }
 
     @Test
@@ -262,6 +260,21 @@ public class MigrationServiceTests {
     }
 
     @Test
+    void migrate_WhenTheConstraintViolationIsThrownItself_ThrowsIllegalArgumentExceptionWithGenericMessage() {
+        // Arrange
+        when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
+        doThrow(mock(ConstraintViolationException.class)).when(vaultRepository)
+                .persist(ArgumentMatchers.<Vault>anyList());
+
+        // Act
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class, () -> service.migrate(USER_ID, fullRequest()));
+
+        // Assert
+        assertEquals(MigrationService.NOT_SAVED_MESSAGE, ex.getMessage());
+    }
+
+    @Test
     void migrate_WhenDatabaseFailsForAnotherReason_RethrowsTheError() {
         // Arrange
         when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
@@ -278,7 +291,7 @@ public class MigrationServiceTests {
 
     private void verifyInserted() {
         verify(vaultRepository).persist(vaults.capture());
-        verify(folderRepository).persist(folders.capture());
+        verify(folderRepository).persistAllInAnyOrder(folders.capture());
         verify(fileRepository).persist(files.capture());
         verify(backlinkRepository).persist(backlinks.capture());
     }

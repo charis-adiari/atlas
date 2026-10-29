@@ -4,7 +4,6 @@ This project uses Java Quarkus.
 
 ## Table of Contents
 1. [Environment Setup](#environment-setup)
-1. [Email Verification](#email-verification)
 1. [Database Setup](#database-setup)
 1. [Code Style Guide](#code-style-guide)
 
@@ -20,33 +19,23 @@ This project uses Java Quarkus.
 
 1. Fill in the actual values in `.env`. For the database password, any value will do for local dev.
 1. If you add a new environment variable, add its key (with a placeholder or blank value) to `.env.example` so others know it's needed.
-1. Create a key pair for the access tokens: the private key signs the access token issued at signup and the public key
-   verifies it on protected endpoints. Both are git-ignored, so every developer makes their own. Run this from the API
-   project root in Git Bash (Git for Windows ships `openssl`):
+1. Create a key pair for the access tokens: the private key signs the access token issued once the email address is
+   verified (by `verify-email` and `login`) and the public key verifies it on protected endpoints. Both keys are read
+   from environment variables, never from files, so nothing secret is stored in the project. Every developer makes
+   their own pair. Run this in Git Bash (Git for Windows ships `openssl`) from any folder outside the project:
 
    ```bash
-   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out src/main/resources/privateKey.pem
-   openssl rsa -in src/main/resources/privateKey.pem -pubout -out src/main/resources/publicKey.pem
+   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out privateKey.pem
+   openssl rsa -in privateKey.pem -pubout -out publicKey.pem
+   grep -v '^-----' privateKey.pem | tr -d '\r\n'
+   grep -v '^-----' publicKey.pem | tr -d '\r\n'
    ```
 
-   In production, set `SMALLRYE_JWT_SIGN_KEY_LOCATION=file:/path/to/privateKey.pem` and
-   `MP_JWT_VERIFY_PUBLICKEY_LOCATION=file:/path/to/publicKey.pem` instead. Tests use their own throw-away pair,
-   `testPrivateKey.pem` and `testPublicKey.pem` in `src/test/resources`.
-
-## Email Verification
-
-Signup creates the account, emails a verification link and signs the user in. Until the link is opened, protected
-endpoints that store data (such as `POST /vaults/migrate`) answer 403. The link opens the page at
-`app.auth.verification-page-address` with `#token=...` added (a fragment, so the token never reaches a server log or a
-referrer header), and that page reads it in the browser, removes it from the address bar and sends it to
-`POST /api/v1/auth/verify-email`. The endpoints `POST /api/v1/auth/resend-verification` and
-`GET /api/v1/auth/verification-status` need the signed-in user's access token.
-
-- In dev and test mode no email is really sent: Quarkus prints it to the console, so copy the link from there.
-- `app.auth.verification-token-lifetime` (default in `application.yml`: `PT24H`) is how long a link stays valid.
-- Neither setting has a default in code, so the app refuses to start when one is missing.
-- In production set these environment variables: `VERIFICATION_PAGE_ADDRESS`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`
-  and `MAIL_PASSWORD`.
+   Put the first printed line (a single line, without the `-----BEGIN` and `-----END` lines) after
+   `ACCESS_TOKEN_PRIVATE_KEY=` in `.env`, and the second after `ACCESS_TOKEN_PUBLIC_KEY=`. Then delete the two `.pem`
+   files. In production, have the secret manager (for example Azure Key Vault) provide these two variables. The app
+   refuses to start if either is missing. Tests use their own throw-away pair, written directly in the `%test` section
+   of `application.yml`.
 
 ## Database Setup
 

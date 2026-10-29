@@ -1,13 +1,4 @@
 -- V2.0.0: user accounts (US-02).
---
--- email is stored normalised (trimmed + lower-case) by the application. The CHECK makes the
--- database enforce that, so the plain UNIQUE constraint is effectively case-insensitive and two
--- simultaneous signups with the same address cannot both succeed.
---
--- email_verified_at is NULL until the user opens the link emailed to them (the tokens behind that link are
--- stored by V9.0.0).
---
--- users.last_opened_vault_id is added later, in V8.0.0: it points at vaults, which does not exist yet.
 
 CREATE TABLE users (
     id                uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -20,3 +11,5 @@ CREATE TABLE users (
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT ck_users_email_normalised CHECK (email <> '' AND email = lower(btrim(email)))
 );
+
+-- rollback: DROP TABLE IF EXISTS users;

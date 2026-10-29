@@ -3,7 +3,10 @@ package com.musketeers.repository.vault;
 import com.musketeers.domain.vault.Folder;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -12,18 +15,19 @@ public class FolderRepository implements PanacheRepositoryBase<Folder, UUID> {
     private static final String RUN_PARENT_CHECK = "SET CONSTRAINTS fk_folders_parent IMMEDIATE";
 
     /**
-     * Postpones the check that a folder's parent exists until {@link #runParentCheck} is called, for the rest of the
-     * current transaction. This lets folders be inserted in any order, a child before its parent.
+     * Persists folders in any order, a child before its parent. The parent check is postponed while they are inserted
+     * and run before this method returns, so a bad hierarchy fails here instead of at commit time. The flush also
+     * sends every other pending insert of the transaction.
+     *
+     * @throws jakarta.persistence.PersistenceException if the database rejects a folder, for example because its
+     *                                                  parent does not exist
      */
-    public void deferParentCheck() {
-        getEntityManager().createNativeQuery(DEFER_PARENT_CHECK).executeUpdate();
-    }
-
-    /**
-     * Runs the postponed parent check now, so a missing parent fails here instead of when the transaction commits.
-     * Pending inserts must be flushed first.
-     */
-    public void runParentCheck() {
-        getEntityManager().createNativeQuery(RUN_PARENT_CHECK).executeUpdate();
+    @Transactional(Transactional.TxType.MANDATORY)
+    public void persistAllInAnyOrder(List<Folder> folders) {
+        EntityManager em = getEntityManager();
+        em.createNativeQuery(DEFER_PARENT_CHECK).executeUpdate();
+        persist(folders);
+        flush();
+        em.createNativeQuery(RUN_PARENT_CHECK).executeUpdate();
     }
 }

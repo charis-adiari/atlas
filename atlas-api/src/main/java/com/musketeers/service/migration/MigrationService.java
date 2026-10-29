@@ -98,17 +98,18 @@ public class MigrationService {
      * Writes everything. The flush happens here so a clash with ids that already exist surfaces inside this method
      * instead of at commit time, and the whole transaction then rolls back.
      *
+     * Depending on the Hibernate version the violation is thrown itself or wrapped in another persistence exception,
+     * so both are recognised.
+     *
      * @throws IllegalArgumentException if the database rejected a record because of a constraint
      */
     private void insert(List<Vault> vaults, List<Folder> folders, List<VaultFile> files, List<Backlink> backlinks) {
         try {
-            folderRepository.deferParentCheck();
             vaultRepository.persist(vaults);
-            folderRepository.persist(folders);
+            folderRepository.persistAllInAnyOrder(folders);
             fileRepository.persist(files);
             backlinkRepository.persist(backlinks);
             backlinkRepository.flush();
-            folderRepository.runParentCheck();
         } catch (PersistenceException e) {
             if (e instanceof ConstraintViolationException || e.getCause() instanceof ConstraintViolationException) {
                 throw new IllegalArgumentException(NOT_SAVED_MESSAGE);

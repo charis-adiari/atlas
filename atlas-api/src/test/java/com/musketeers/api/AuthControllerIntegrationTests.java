@@ -6,6 +6,7 @@ import com.musketeers.repository.EmailVerificationTokenRepository;
 import com.musketeers.repository.UserRepository;
 import com.musketeers.service.AuthService;
 import com.musketeers.service.EmailVerificationService;
+import com.musketeers.service.ResendVerificationLimiter;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.MockMailbox;
@@ -67,31 +68,27 @@ public class AuthControllerIntegrationTests {
     @Inject
     MockMailbox mailbox;
 
+    @Inject
+    ResendVerificationLimiter resendLimiter;
+
     @BeforeEach
     void startFromAnEmptyState() {
         QuarkusTransaction.requiringNew().run(() -> userRepository.deleteAll());
         mailbox.clear();
+        resendLimiter.reset();
     }
 
     @Test
-    void signup_CreatesAccountAndReturnsAccessTokenWithoutUserDetails() {
-        Response response = signup(EMAIL, STRONG_PASSWORD);
+    void signup_CreatesAccountAndReportsThatVerificationIsRequiredWithoutAnAccessToken() {
+        Response response = signup("Ada@Example.COM", STRONG_PASSWORD);
 
         response.then()
                 .statusCode(201)
                 .header("Cache-Control", "no-store")
-                .body("tokenType", equalTo("Bearer"))
-                .body("expiresIn", equalTo(3600))
-                .body("accessToken", not(emptyOrNullString()))
-                .body("$", not(hasKey("user")));
+                .body("status", equalTo("verification_required"))
+                .body("email", equalTo(EMAIL))
+                .body("$", not(hasKey("accessToken")));
         assertFalse(response.asString().contains(STRONG_PASSWORD));
-
-        JsonPath claims = claimsOf(response.jsonPath().getString("accessToken"));
-        assertEquals(findByEmail(EMAIL).id.toString(), claims.getString("sub"));
-        assertEquals("atlas", claims.getString("iss"));
-        assertEquals(EMAIL, claims.getString("email"));
-        assertTrue(claims.getList("groups", String.class).contains("user"));
-        assertTrue(claims.getLong("exp") > claims.getLong("iat"));
     }
 
     @Test
@@ -236,19 +233,34 @@ public class AuthControllerIntegrationTests {
     }
 
     @Test
-    void verifyEmail_WithTheEmailedToken_VerifiesTheEmailAddress() {
+    void verifyEmail_WithTheEmailedToken_VerifiesTheEmailAddressAndSignsTheUserIn() {
         signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
 
-        verifyEmail(emailedToken()).then().statusCode(204);
+        Response response = verifyEmail(emailedToken());
 
-        assertNotNull(findByEmail(EMAIL).emailVerifiedAt);
+        response.then()
+                .statusCode(200)
+                .header("Cache-Control", "no-store")
+                .body("tokenType", equalTo("Bearer"))
+                .body("expiresIn", equalTo(3600))
+                .body("accessToken", not(emptyOrNullString()))
+                .body("$", not(hasKey("user")));
+        User stored = findByEmail(EMAIL);
+        assertNotNull(stored.emailVerifiedAt);
+
+        JsonPath claims = claimsOf(response.jsonPath().getString("accessToken"));
+        assertEquals(stored.id.toString(), claims.getString("sub"));
+        assertEquals("atlas", claims.getString("iss"));
+        assertEquals(EMAIL, claims.getString("email"));
+        assertTrue(claims.getList("groups", String.class).contains("user"));
+        assertTrue(claims.getLong("exp") > claims.getLong("iat"));
     }
 
     @Test
     void verifyEmail_WhenTheTokenIsUsedTwice_Returns400TheSecondTime() {
         signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
         String token = emailedToken();
-        verifyEmail(token).then().statusCode(204);
+        verifyEmail(token).then().statusCode(200);
 
         verifyEmail(token).then()
                 .statusCode(400)
@@ -298,60 +310,129 @@ public class AuthControllerIntegrationTests {
     }
 
     @Test
-    void resendVerification_SendsANewLinkAndStopsTheOldOneWorking() {
-        String accessToken = signup(EMAIL, STRONG_PASSWORD).jsonPath().getString("accessToken");
+    void login_WhenEmailIsVerified_ReturnsAnAccessToken() {
+        signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
+        verifyEmail(emailedToken()).then().statusCode(200);
+
+        Response response = login("Ada@Example.COM", STRONG_PASSWORD);
+
+        response.then()
+                .statusCode(200)
+                .header("Cache-Control", "no-store")
+                .body("tokenType", equalTo("Bearer"))
+                .body("accessToken", not(emptyOrNullString()));
+        JsonPath claims = claimsOf(response.jsonPath().getString("accessToken"));
+        assertEquals(findByEmail(EMAIL).id.toString(), claims.getString("sub"));
+    }
+
+    @Test
+    void login_WhenPasswordIsRightButEmailIsUnverified_Returns400() {
+        signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
+
+        login(EMAIL, STRONG_PASSWORD).then()
+                .statusCode(400)
+                .contentType(PROBLEM_JSON)
+                .body("statusCode", is(400))
+                .body("detail", equalTo(AuthService.EMAIL_NOT_VERIFIED_MESSAGE))
+                .body("$", not(hasKey("accessToken")));
+    }
+
+    @Test
+    void login_WhenPasswordIsWrongAndEmailIsUnverified_Returns401WithoutRevealingTheAccount() {
+        signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
+
+        Response wrongPassword = login(EMAIL, "Wr0ng!Pass");
+        Response unknownEmail = login("nobody@example.com", "Wr0ng!Pass");
+
+        wrongPassword.then()
+                .statusCode(401)
+                .contentType(PROBLEM_JSON)
+                .body("detail", equalTo(AuthService.INVALID_CREDENTIALS_MESSAGE))
+                .body("$", not(hasKey("code")));
+        assertEquals(unknownEmail.statusCode(), wrongPassword.statusCode());
+        assertEquals(unknownEmail.jsonPath().getString("detail"), wrongPassword.jsonPath().getString("detail"));
+    }
+
+    @Test
+    void login_WhenPasswordIsWrongAndEmailIsVerified_Returns401() {
+        signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
+        verifyEmail(emailedToken()).then().statusCode(200);
+
+        login(EMAIL, "Wr0ng!Pass").then()
+                .statusCode(401)
+                .body("detail", equalTo(AuthService.INVALID_CREDENTIALS_MESSAGE));
+    }
+
+    @Test
+    void login_WhenFieldsAreMissing_Returns400WithFieldErrors() {
+        login("", "").then()
+                .statusCode(400)
+                .contentType(PROBLEM_JSON)
+                .body("errors.email", not(emptyOrNullString()))
+                .body("errors.password", not(emptyOrNullString()));
+    }
+
+    @Test
+    void resendVerification_WithoutAccessToken_SendsANewLinkAndStopsTheOldOneWorking() {
+        signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
         String oldToken = emailedToken();
 
-        given().header("Authorization", "Bearer " + accessToken)
-                .when().post("resend-verification")
-                .then().statusCode(204);
+        resendVerification("Ada@Example.COM").then().statusCode(202);
 
         assertEquals(2, mailbox.getMailsSentTo(EMAIL).size());
         String newToken = emailedToken();
         assertNotEquals(oldToken, newToken);
         verifyEmail(oldToken).then().statusCode(400);
-        verifyEmail(newToken).then().statusCode(204);
+        verifyEmail(newToken).then().statusCode(200);
     }
 
     @Test
-    void resendVerification_WithoutAccessToken_Returns401() {
-        given().when().post("resend-verification").then().statusCode(401);
+    void resendVerification_WhenNoAccountUsesTheEmail_Returns202AndSendsNothing() {
+        resendVerification("nobody@example.com").then().statusCode(202);
 
         assertEquals(0, mailbox.getTotalMessagesSent());
     }
 
     @Test
-    void resendVerification_WhenEmailIsAlreadyVerified_Returns400AndSendsNothing() {
-        String accessToken = signup(EMAIL, STRONG_PASSWORD).jsonPath().getString("accessToken");
-        verifyEmail(emailedToken()).then().statusCode(204);
+    void resendVerification_WhenEmailIsAlreadyVerified_Returns202AndSendsNothing() {
+        signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
+        verifyEmail(emailedToken()).then().statusCode(200);
         mailbox.clear();
 
-        given().header("Authorization", "Bearer " + accessToken)
-                .when().post("resend-verification")
-                .then()
-                .statusCode(400)
-                .body("detail", equalTo(EmailVerificationService.ALREADY_VERIFIED_MESSAGE));
+        resendVerification(EMAIL).then().statusCode(202);
+
         assertEquals(0, mailbox.getTotalMessagesSent());
     }
 
     @Test
-    void getVerificationStatus_ReportsWhetherTheEmailAddressIsVerified() {
-        String accessToken = signup(EMAIL, STRONG_PASSWORD).jsonPath().getString("accessToken");
+    void resendVerification_WhenTheEmailIsOverItsLimit_StillReturns202ButSendsNothingMore() {
+        signup(EMAIL, STRONG_PASSWORD).then().statusCode(201);
+        mailbox.clear();
 
-        given().header("Authorization", "Bearer " + accessToken)
-                .when().get("verification-status")
-                .then().statusCode(200).header("Cache-Control", "no-store").body("isVerified", is(false));
+        for (int i = 0; i < 4; i++) {
+            resendVerification(EMAIL).then().statusCode(202);
+        }
 
-        verifyEmail(emailedToken()).then().statusCode(204);
-
-        given().header("Authorization", "Bearer " + accessToken)
-                .when().get("verification-status")
-                .then().statusCode(200).body("isVerified", is(true));
+        assertEquals(3, mailbox.getMailsSentTo(EMAIL).size());
     }
 
     @Test
-    void getVerificationStatus_WithoutAccessToken_Returns401() {
-        given().when().get("verification-status").then().statusCode(401);
+    void resendVerification_WhenTheClientIsOverItsLimit_Returns429() {
+        for (int i = 0; i < 20; i++) {
+            resendVerification("person" + i + "@example.com").then().statusCode(202);
+        }
+
+        resendVerification("one-more@example.com").then()
+                .statusCode(429)
+                .contentType(PROBLEM_JSON)
+                .body("detail", equalTo(EmailVerificationService.TOO_MANY_REQUESTS_MESSAGE));
+    }
+
+    @Test
+    void resendVerification_WhenEmailIsInvalid_Returns400WithEmailError() {
+        resendVerification("not-an-email").then()
+                .statusCode(400)
+                .body("errors.email", not(emptyOrNullString()));
     }
 
     private static Response signup(String email, String password) {
@@ -367,6 +448,22 @@ public class AuthControllerIntegrationTests {
                 .contentType(ContentType.JSON)
                 .body(Map.of("token", token))
                 .when().post("verify-email")
+                .andReturn();
+    }
+
+    private static Response login(String email, String password) {
+        return given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("email", email, "password", password))
+                .when().post("login")
+                .andReturn();
+    }
+
+    private static Response resendVerification(String email) {
+        return given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("email", email))
+                .when().post("resend-verification")
                 .andReturn();
     }
 
