@@ -1,7 +1,31 @@
 app:
   log-format: "%d{HH:mm:ss,SSS} %-5p [%c{1.}] %X{correlationId} %s%e%n"
+  auth:
+    issuer: atlas
+    token-ttl: PT1H
+    bcrypt-cost: 12
+    verification-token-lifetime: PT24H
+    resend-verification:
+      per-email-limit: 3
+      per-client-address-limit: 20
+      window: PT1H
+
+smallrye:
+  jwt:
+    sign:
+      key: ${ACCESS_TOKEN_PRIVATE_KEY}
+
+mp:
+  jwt:
+    verify:
+      publickey: ${ACCESS_TOKEN_PUBLIC_KEY}
+      issuer: ${app.auth.issuer}
 
 quarkus:
+  jackson:
+    accept-case-insensitive-enums: true
+  mailer:
+    from: noreply@musketeers.com
   http:
     port: 8080
     test-port: 0
@@ -21,6 +45,10 @@ quarkus:
   smallrye-openapi:
     info-title: Atlas
     info-version: 1.0.0
+    security-scheme: jwt
+  hibernate-orm:
+    jdbc:
+      statement-batch-size: 100
   datasource:
     db-kind: postgresql
   console:
@@ -33,6 +61,9 @@ quarkus:
       format: ${app.log-format}
 
 "%dev":
+  app:
+    auth:
+      verification-page-address: http://localhost:3000/verify-email
   quarkus:
     http:
       cors:
@@ -49,8 +80,31 @@ quarkus:
     console:
       color: true
 
+"%test":
+  app:
+    auth:
+      bcrypt-cost: 4
+      verification-page-address: http://localhost:3000/verify-email
+  smallrye:
+    jwt:
+      sign:
+        key: "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDCy5D0AxR5RkaL4grBxxyDsPOK5l8GJKQ95pvDzYRrsf2yleZDobABxlS0K0MymzAoNJQCRjJJpE5mJL/TQTCIYldn++fNa/L4Hz7cYGoy7FPi1Ie6swIi0w1SVQ9SM1WUSKncsTnYJqfikGiSGTLvHznpk0EqYWbcz6gj03V/ujxWIUqtRqk2qybLuUl6fBH0LuNRjcUZPAq4slK0G0DhnRE61q+vx8L6rsXleExvbwwx2zYSrJGsWMT3831zbtxaElR9otlgyJtEt0ogAiASX0dK5pXorcvbxzO1dD6otWYzT1g4CIC2/0vRY5ymPrCrUFtFNv/KTsOfMVaj2dx7AgMBAAECggEAIFIaeQJR0VWBuxAEbOaWqpsfrbpPpftKbSLoUXK2OBBOYeVRUYNwarr3rvVGrwzkzqb6r+3pxiJHB9etJGY6oUZ/7jbz3Te+FsFIctRkipJ/0LEm3Cl7fz+5hCGs6xytZG8yD/Yv/NddH9CKKUOZGef6efD+7QNAR/8EjP03D7wSl+gEi8NI07E2C8Lgb/ZkmUS5E9gVkDPiizAghFIA43VLEIe7uHiI4yUChW+d24sYuubltYx3Uwf/LMTsgnJUcNIxtOJ5KygQvHZRBh8j7snZSryTfEcUGnRUZBnksFr1BywcZy6kOcE6XDqJpFMAMOZfR+sF+KjxHnJJquDSYQKBgQDxI0v95fs+ZqB6bnGd9/4SYsT7bfx8M8YS5O7ZrP6sFpfeXpOAi2ZxfVQwG6T2E8DdEqjmfVD3zDXM3PDcSYQihOKfRLk2STMS7H+ojw+tJuCvvuSgaOCma2y3G2Qpc9/Utov3A8xuFXPJxdxlh9ap9IP154dUNZK9DGAk3UpJ0wKBgQDOzRGOy+mz0XQOIvefAzPTmUr2hNpHtmOWYi3kLqaO64023eRBW+8nHvOGPWpa2dhdmDaUyZ4ojeU8dF/39LD6pDQG+7K8JmMDXV8xxs7mCzwbOrIA98KXHNCaQU0iGg0kk8LHEKk6sNxBdR5EMCRmfKKssU038r3F5LYqQv6RuQKBgHzk4z8mFvNDBGtlOMOw5o9vSMdROCy8RCMVIADucRmAujgalBtIGE8/spMYPmCV6paWS5TV41H1Gwh4hugRy7Z1TUtgtO1BDIsIozYSovPz5vwfyxqqN3D6wtwz+7Tcp1ntEqFl/kQmKEqhiH2t1alBU/fRa25aMR5pgoKVexyxAoGBALzT0MFjfgxcJy01TocaRHtkkGdSXYF3j61kDmU5F4qOmI3NxDrNuCwvfctITtGP8plbgBMRmeGL1xIBbROakPL7dioeL1DPeD89RcvMrWSuQ37VdG2fzUVv4SXIlKabxP5uET70/qEBlswKJc27a7FNArjO2CRK+G827ALg01O5AoGBALfMnjYED4FyCYf21UoTNNJMy/s+bjO5WDXgk1plm/lMr/lIqm917s2Dv0TIk/u54c35lU6904uNa0F1dcn48WL0svYLqlFDHC2Qp7p4VaaVKpqYzX/FG4sm9hoV3haN0PQ/27EqAO+N8NkGsfEa4znT7ehxQtXxprhmeLrmWb2+"
+  mp:
+    jwt:
+      verify:
+        publickey: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwsuQ9AMUeUZGi+IKwcccg7DziuZfBiSkPeabw82Ea7H9spXmQ6GwAcZUtCtDMpswKDSUAkYySaROZiS/00EwiGJXZ/vnzWvy+B8+3GBqMuxT4tSHurMCItMNUlUPUjNVlEip3LE52Can4pBokhky7x856ZNBKmFm3M+oI9N1f7o8ViFKrUapNqsmy7lJenwR9C7jUY3FGTwKuLJStBtA4Z0ROtavr8fC+q7F5XhMb28MMds2EqyRrFjE9/N9c27cWhJUfaLZYMibRLdKIAIgEl9HSuaV6K3L28cztXQ+qLVmM09YOAiAtv9L0WOcpj6wq1BbRTb/yk7DnzFWo9ncewIDAQAB"
+
 "%prod":
+  app:
+    auth:
+      verification-page-address: ${VERIFICATION_PAGE_ADDRESS}
   quarkus:
+    mailer:
+      host: ${MAIL_HOST}
+      port: ${MAIL_PORT}
+      username: ${MAIL_USER}
+      password: ${MAIL_PASSWORD}
+      start-tls: REQUIRED
     datasource:
       username: ${DB_USER}
       password: ${DB_PASSWORD}
