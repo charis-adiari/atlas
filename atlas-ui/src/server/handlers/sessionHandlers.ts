@@ -39,8 +39,8 @@ export async function handleSignup(request: NextRequest): Promise<NextResponse> 
 
 /**
  * Handles a login: passes it to the API and, when the credentials are accepted, keeps the access token in an HttpOnly
- * cookie instead of giving it to the page. A refusal is passed on unchanged, including the 403 with code
- * EMAIL_NOT_VERIFIED for an account whose address is not verified yet.
+ * cookie instead of giving it to the page. A refusal is passed on unchanged, including the 400 for an account whose
+ * address is not verified yet.
  */
 export function handleLogin(request: NextRequest): Promise<NextResponse> {
   return establishSession(request, '/auth/login');

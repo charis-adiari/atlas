@@ -198,22 +198,21 @@ describe('handleLogin', () => {
     expect(newToken).not.toBe(oldToken);
   });
 
-  it('passes on the refusal of an unverified account, with its code, and starts no session', async () => {
+  it('passes on the refusal of an unverified account and starts no session', async () => {
     // Arrange
     const problem = {
-      statusCode: 403,
-      title: 'Forbidden',
-      detail: 'Verify your email address before signing in.',
-      code: 'EMAIL_NOT_VERIFIED'
+      statusCode: 400,
+      title: 'Bad Request',
+      detail: 'Verify your email address before signing in.'
     };
-    upstream.reply(403, problem);
+    upstream.reply(400, problem);
     const request = createTrustedRequest('/api/v1/auth/login', { body: CREDENTIALS });
 
     // Act
     const response = await handleLogin(request);
 
     // Assert
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(400);
     expect(await response.json()).toEqual(problem);
     expect(response.cookies.get(getSessionCookieName())).toBeUndefined();
   });

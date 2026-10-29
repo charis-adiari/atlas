@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HttpMock, TEST_CSRF_TOKEN, jsonReply, problemReply } from '@/test/HttpMock';
 import { ApiError } from './ApiError';
-import { isEmailNotVerified, resendVerification, signup, verifyEmail } from './authApi';
+import {
+  EMAIL_NOT_VERIFIED_MESSAGE,
+  isEmailNotVerified,
+  resendVerification,
+  signup,
+  verifyEmail
+} from './authApi';
 
 const http = new HttpMock();
 const USER = { id: 'user-1', email: 'jd@example.com' };
@@ -89,7 +95,7 @@ describe('resendVerification', () => {
 describe('isEmailNotVerified', () => {
   it('recognises the refusal of an account whose address is not verified', () => {
     // Arrange
-    const error = new ApiError(403, 'Verify first.', {}, { code: 'EMAIL_NOT_VERIFIED' });
+    const error = new ApiError(400, EMAIL_NOT_VERIFIED_MESSAGE);
 
     // Act & Assert
     expect(isEmailNotVerified(error)).toBe(true);
@@ -97,7 +103,8 @@ describe('isEmailNotVerified', () => {
 
   it.each([
     new ApiError(403, 'Forbidden.', {}, { code: 'csrf_invalid' }),
-    new ApiError(401, 'Wrong password.', {}, { code: 'EMAIL_NOT_VERIFIED' }),
+    new ApiError(400, 'Some other problem.'),
+    new ApiError(401, EMAIL_NOT_VERIFIED_MESSAGE),
     new Error('boom')
   ])('ignores any other failure', (error) => {
     // Act & Assert

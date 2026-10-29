@@ -8,7 +8,7 @@ import type {
 import { ApiError } from './ApiError';
 import { UNKNOWN_ERROR_MESSAGE, httpClient } from './httpClient';
 
-export const EMAIL_NOT_VERIFIED_CODE = 'EMAIL_NOT_VERIFIED';
+export const EMAIL_NOT_VERIFIED_MESSAGE = 'Verify your email address before signing in.';
 
 const SIGNUP_PATH = '/auth/signup';
 const LOGIN_PATH = '/auth/login';
@@ -17,7 +17,7 @@ const SESSION_PATH = '/auth/session';
 const VERIFY_EMAIL_PATH = '/auth/verify-email';
 const RESEND_VERIFICATION_PATH = '/auth/resend-verification';
 const UNAUTHORIZED_STATUS = 401;
-const FORBIDDEN_STATUS = 403;
+const BAD_REQUEST_STATUS = 400;
 const VERIFICATION_REQUIRED = 'verification_required';
 
 /**
@@ -110,13 +110,13 @@ export async function resendVerification(email: string): Promise<void> {
 
 /**
  * Tells whether a failed login was refused only because the account's address is not verified yet, in which case the
- * password was right.
+ * password was right. The API answers that with a 400 whose detail is this exact message.
  */
 export function isEmailNotVerified(error: unknown): boolean {
   return (
     error instanceof ApiError &&
-    error.statusCode === FORBIDDEN_STATUS &&
-    error.details.code === EMAIL_NOT_VERIFIED_CODE
+    error.statusCode === BAD_REQUEST_STATUS &&
+    error.message === EMAIL_NOT_VERIFIED_MESSAGE
   );
 }
 

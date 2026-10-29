@@ -255,7 +255,7 @@ export class FakeAtlasApi {
       return problemReply(401, INVALID_CREDENTIALS_DETAIL);
     }
     if (!account.isVerified) {
-      return problemReply(403, EMAIL_NOT_VERIFIED_DETAIL, undefined, 'EMAIL_NOT_VERIFIED');
+      return problemReply(400, EMAIL_NOT_VERIFIED_DETAIL);
     }
     return this.startSession(account);
   }
