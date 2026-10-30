@@ -1,5 +1,6 @@
 'use client';
 
+import { AuthStatus } from '@/lib/auth/session/authSessionStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -19,10 +20,10 @@ export function RequireSession({ children }: RequireSessionProps) {
   const { status } = useAuthSession();
 
   useEffect(() => {
-    if (status === 'anonymous') {
+    if (status === AuthStatus.anonymous) {
       router.replace(AUTH_REQUIRED_PATH);
     }
   }, [status, router]);
 
-  return status === 'authenticated' ? children : null;
+  return status === AuthStatus.authenticated ? children : null;
 }

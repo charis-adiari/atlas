@@ -1,4 +1,3 @@
-import { Icon } from '@/components/ui/Icon';
 import type { PasswordRuleResult } from '@/lib/auth/validation/passwordRules';
 import styles from './PasswordRequirements.module.css';
 
@@ -19,7 +18,15 @@ export function PasswordRequirements({ id, results }: PasswordRequirementsProps)
         {results.map(({ id: ruleId, label, isMet }) => (
           <li key={ruleId} className={isMet ? styles.met : styles.unmet}>
             <span className={styles.marker} aria-hidden="true">
-              {isMet && <Icon name="check" size={12} />}
+              {isMet && (
+                <span
+                  className="material-symbols-rounded"
+                  aria-hidden="true"
+                  style={{ fontSize: '0.75rem' }}
+                >
+                  check
+                </span>
+              )}
             </span>
             {label}
             <span className={styles.visuallyHidden}>{isMet ? ' (met)' : ' (not met)'}</span>

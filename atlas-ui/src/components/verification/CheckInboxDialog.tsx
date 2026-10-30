@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent, useId } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/Button/Button';
 import { ModalDialog } from '@/components/ui/ModalDialog';
 import { useResendCountdown } from '@/hooks/verification/useResendCountdown';
 import { getEmailVerificationProvider } from '@/lib/auth/verification/emailVerification';
@@ -66,7 +65,13 @@ export function CheckInboxDialog({
     <ModalDialog labelledById={titleId}>
       <div className={styles.centered}>
         <span className={styles.mark}>
-          <Icon name="mail" size={26} />
+          <span
+            className="material-symbols-rounded"
+            aria-hidden="true"
+            style={{ fontSize: '1.625rem' }}
+          >
+            mail
+          </span>
         </span>
         <h2 id={titleId} className={styles.title}>
           Check your inbox
@@ -76,7 +81,13 @@ export function CheckInboxDialog({
           account and sign in.
         </p>
       </div>
-      <Button variant="secondary" isFullWidth disabled={!countdown.canResend} onClick={resend}>
+      <Button
+        variant="outline"
+        size="large"
+        className={styles.action}
+        disabled={!countdown.canResend}
+        onClick={resend}
+      >
         {countdown.canResend ? 'Resend email' : `Resend email in ${countdown.label}`}
       </Button>
       <button type="button" className={styles.link} onClick={onUseDifferentEmail}>

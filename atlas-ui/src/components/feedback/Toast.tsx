@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import styles from './Toast.module.css';
 
 interface ToastProps {
@@ -22,14 +21,22 @@ export function Toast({ title, message, onDismiss }: ToastProps) {
   return (
     <div role="status" className={styles.toast}>
       <span className={styles.marker}>
-        <Icon name="check" size={14} />
+        <span
+          className="material-symbols-rounded"
+          aria-hidden="true"
+          style={{ fontSize: '0.875rem' }}
+        >
+          check
+        </span>
       </span>
       <div className={styles.text}>
         <p className={styles.title}>{title}</p>
         <p className={styles.message}>{message}</p>
       </div>
       <button type="button" className={styles.dismiss} onClick={onDismiss} aria-label="Dismiss">
-        <Icon name="close" size={16} />
+        <span className="material-symbols-rounded" aria-hidden="true" style={{ fontSize: '1rem' }}>
+          close
+        </span>
       </button>
     </div>
   );

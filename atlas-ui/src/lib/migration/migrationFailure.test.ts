@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import { ALREADY_MIGRATED_MESSAGE } from '@/lib/api/migrationApi';
 import { UNEXPECTED_MIGRATION_MESSAGE, describeMigrationFailure } from './migrationFailure';
 import type { MigrationFailure } from './migrationRunner';

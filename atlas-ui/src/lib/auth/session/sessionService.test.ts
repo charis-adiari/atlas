@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import { httpClient } from '@/lib/api/httpClient';
 import { HttpMock, jsonReply, problemReply } from '@/test/HttpMock';
-import { getAuthState, resetAuthState, startSession } from './authSessionStore';
+import { AuthStatus, getAuthState, resetAuthState, startSession } from './authSessionStore';
 import { beginSession, ensureSessionRestored, signOut } from './sessionService';
 
 const NOW = new Date('2026-10-12T12:00:00Z').getTime();
@@ -56,7 +56,7 @@ describe('ensureSessionRestored', () => {
     await ensureSessionRestored();
 
     // Assert
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
     expect(getAuthState().session?.user).toEqual(USER);
   });
 
@@ -68,7 +68,11 @@ describe('ensureSessionRestored', () => {
     await ensureSessionRestored();
 
     // Assert
-    expect(getAuthState()).toEqual({ status: 'anonymous', session: null, endReason: null });
+    expect(getAuthState()).toEqual({
+      status: AuthStatus.anonymous,
+      session: null,
+      endReason: null
+    });
   });
 
   it('leaves the visitor anonymous when the check itself fails', async () => {
@@ -79,7 +83,7 @@ describe('ensureSessionRestored', () => {
     await ensureSessionRestored();
 
     // Assert
-    expect(getAuthState().status).toBe('anonymous');
+    expect(getAuthState().status).toBe(AuthStatus.anonymous);
   });
 
   it('checks only once however many times it is asked', async () => {
@@ -108,7 +112,7 @@ describe('a restore that finishes late', () => {
     await restoring;
 
     // Assert
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
   });
 });
 
@@ -123,7 +127,11 @@ describe('signOut', () => {
 
     // Assert
     expect(http.handler.mock.calls[0][0]).toMatchObject({ method: 'POST', path: '/auth/logout' });
-    expect(getAuthState()).toEqual({ status: 'anonymous', session: null, endReason: 'signed-out' });
+    expect(getAuthState()).toEqual({
+      status: AuthStatus.anonymous,
+      session: null,
+      endReason: 'signed-out'
+    });
   });
 
   it('keeps the user signed in, and says so, when the server cannot be reached', async () => {
@@ -136,7 +144,7 @@ describe('signOut', () => {
 
     // Assert
     await expect(failure).rejects.toBeInstanceOf(ApiError);
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
   });
 });
 
@@ -150,7 +158,11 @@ describe('an expired session reported by the server', () => {
     await httpClient.get('/vaults').catch(() => undefined);
 
     // Assert
-    expect(getAuthState()).toEqual({ status: 'anonymous', session: null, endReason: 'expired' });
+    expect(getAuthState()).toEqual({
+      status: AuthStatus.anonymous,
+      session: null,
+      endReason: 'expired'
+    });
   });
 
   it('does nothing for an anonymous visitor', async () => {
@@ -162,6 +174,6 @@ describe('an expired session reported by the server', () => {
     await httpClient.get('/vaults').catch(() => undefined);
 
     // Assert
-    expect(getAuthState().status).toBe('loading');
+    expect(getAuthState().status).toBe(AuthStatus.loading);
   });
 });

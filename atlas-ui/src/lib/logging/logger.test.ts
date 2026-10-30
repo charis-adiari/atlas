@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import { logUnexpectedError, setErrorLogSink, type ErrorLogEntry } from './logger';
 
 afterEach(() => {

@@ -136,8 +136,12 @@ describe('handleSignup', () => {
     expect(body.detail).toBe('The service is temporarily unavailable.');
     expect(JSON.stringify(body)).not.toContain('ECONNREFUSED');
     expect(log).toHaveBeenCalledWith(
-      '[atlas-server] upstream call failed',
-      expect.objectContaining({ reason: 'ECONNREFUSED' })
+      '[atlas]',
+      expect.objectContaining({
+        context: 'upstream',
+        method: 'POST',
+        message: expect.stringContaining('ECONNREFUSED')
+      })
     );
   });
 });

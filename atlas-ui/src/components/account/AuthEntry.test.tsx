@@ -1,7 +1,12 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAuthState, resetAuthState, startSession } from '@/lib/auth/session/authSessionStore';
+import {
+  AuthStatus,
+  getAuthState,
+  resetAuthState,
+  startSession
+} from '@/lib/auth/session/authSessionStore';
 import { setEmailVerificationProvider } from '@/lib/auth/verification/emailVerification';
 import { setErrorLogSink } from '@/lib/logging/logger';
 import { LOCAL_VAULT_DATA_KEY, MIGRATION_RECORD_KEY } from '@/lib/migration/local/localVaultData';
@@ -112,7 +117,7 @@ describe('AuthEntry for an anonymous visitor', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Account created');
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
   });
 
   it('keeps showing sign up and no badge when signup fails', async () => {
@@ -172,7 +177,7 @@ describe('AuthEntry for a signed-in user', () => {
     expect(await screen.findByRole('button', { name: 'Sign up' })).toBeInTheDocument();
     expect(api.countRequests('/auth/logout')).toBe(1);
     expect(api.getSessionUserId()).toBeNull();
-    expect(getAuthState()).toMatchObject({ status: 'anonymous', endReason: 'signed-out' });
+    expect(getAuthState()).toMatchObject({ status: AuthStatus.anonymous, endReason: 'signed-out' });
     expect(routerMock.push).toHaveBeenCalledWith('/');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
@@ -192,7 +197,7 @@ describe('AuthEntry for a signed-in user', () => {
     // Assert
     expect(await screen.findByRole('alert')).toHaveTextContent("We couldn't log you out");
     expect(screen.getByRole('img', { name: `Signed in as ${EMAIL}` })).toBeInTheDocument();
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
     expect(routerMock.push).not.toHaveBeenCalled();
   });
 
@@ -293,7 +298,7 @@ describe('AuthEntry migration', () => {
       await screen.findByRole('dialog', { name: 'Move your vaults to your account?' })
     ).toHaveTextContent('3 vaults · 4 notes · 2 canvases');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
   });
 
   it('keeps the data local and says so when the user declines', async () => {
@@ -349,7 +354,7 @@ describe('AuthEntry email verification', () => {
     expect(dialog).toHaveTextContent("Your local vaults haven't been touched");
     expect(api.countRequests('/auth/resend-verification')).toBe(0);
     expect(api.getSessionUserId()).toBeNull();
-    expect(getAuthState().status).toBe('anonymous');
+    expect(getAuthState().status).toBe(AuthStatus.anonymous);
     expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('dialog', { name: 'Move your vaults to your account?' })
@@ -369,7 +374,7 @@ describe('AuthEntry email verification', () => {
 
     // Assert
     expect(screen.getByRole('dialog', { name: 'Check your inbox' })).toBeInTheDocument();
-    expect(getAuthState().status).toBe('anonymous');
+    expect(getAuthState().status).toBe(AuthStatus.anonymous);
   });
 
   it('signs the user in and carries on to the migration prompt once the link is opened', async () => {

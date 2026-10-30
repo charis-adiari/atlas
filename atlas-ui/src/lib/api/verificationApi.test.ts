@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HttpMock, TEST_CSRF_TOKEN, jsonReply, problemReply } from '@/test/HttpMock';
-import { ApiError } from './ApiError';
+import { ApiError } from './apiError';
 import {
   EMAIL_NOT_VERIFIED_MESSAGE,
   isEmailNotVerified,

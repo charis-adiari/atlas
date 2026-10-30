@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AuthStatus,
   endSession,
   getAuthState,
   getServerAuthState,
@@ -32,9 +33,9 @@ describe('authSessionStore', () => {
     const { status, session } = state;
 
     // Assert
-    expect(status).toBe('loading');
+    expect(status).toBe(AuthStatus.loading);
     expect(session).toBeNull();
-    expect(getServerAuthState().status).toBe('loading');
+    expect(getServerAuthState().status).toBe(AuthStatus.loading);
   });
 
   it('marks the user as signed in and holds no token', () => {
@@ -46,7 +47,7 @@ describe('authSessionStore', () => {
 
     // Assert
     const state = getAuthState();
-    expect(state.status).toBe('authenticated');
+    expect(state.status).toBe(AuthStatus.authenticated);
     expect(state.session).toEqual({ user: USER, expiresAt });
     expect(JSON.stringify(state)).not.toMatch(/token|jwt/i);
   });
@@ -98,7 +99,11 @@ describe('authSessionStore', () => {
     vi.advanceTimersByTime(HOUR);
 
     // Assert
-    expect(getAuthState()).toEqual({ status: 'anonymous', session: null, endReason: 'expired' });
+    expect(getAuthState()).toEqual({
+      status: AuthStatus.anonymous,
+      session: null,
+      endReason: 'expired'
+    });
   });
 
   it('treats a session that has already expired as ended', () => {
@@ -109,7 +114,11 @@ describe('authSessionStore', () => {
     startSession(USER, expiresAt);
 
     // Assert
-    expect(getAuthState()).toEqual({ status: 'anonymous', session: null, endReason: 'expired' });
+    expect(getAuthState()).toEqual({
+      status: AuthStatus.anonymous,
+      session: null,
+      endReason: 'expired'
+    });
   });
 
   it('stays signed in until the expiry moment', () => {
@@ -120,7 +129,7 @@ describe('authSessionStore', () => {
     vi.advanceTimersByTime(HOUR - 1);
 
     // Assert
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
   });
 
   it('keeps the reason when the user signs out before the expiry', () => {
@@ -146,7 +155,7 @@ describe('authSessionStore', () => {
     vi.advanceTimersByTime(5 * DAY);
 
     // Assert
-    expect(statusAfterTwentyFiveDays).toBe('authenticated');
+    expect(statusAfterTwentyFiveDays).toBe(AuthStatus.authenticated);
     expect(getAuthState().endReason).toBe('expired');
   });
 
@@ -158,8 +167,8 @@ describe('authSessionStore', () => {
     resetAuthState();
 
     // Assert
-    expect(getAuthState().status).toBe('loading');
+    expect(getAuthState().status).toBe(AuthStatus.loading);
     vi.advanceTimersByTime(2 * HOUR);
-    expect(getAuthState().status).toBe('loading');
+    expect(getAuthState().status).toBe(AuthStatus.loading);
   });
 });

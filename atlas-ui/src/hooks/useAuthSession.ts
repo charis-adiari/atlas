@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import {
+  AuthStatus,
   getAuthState,
   getServerAuthState,
   subscribeToAuth,
@@ -28,7 +29,7 @@ export function useAuthSession(): UseAuthSessionResult {
 
   return {
     ...state,
-    isAuthenticated: state.status === 'authenticated',
-    isLoading: state.status === 'loading'
+    isAuthenticated: state.status === AuthStatus.authenticated,
+    isLoading: state.status === AuthStatus.loading
   };
 }

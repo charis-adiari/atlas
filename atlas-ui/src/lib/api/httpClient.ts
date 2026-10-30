@@ -1,6 +1,6 @@
 import axios, { type AxiosError } from 'axios';
 import type { ApiProblemDetail } from '@/types/api';
-import { ApiError, type ApiErrorDetails } from './ApiError';
+import { ApiError, type ApiErrorDetails } from './apiError';
 
 declare module 'axios' {
   interface AxiosRequestConfig {

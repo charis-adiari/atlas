@@ -1,6 +1,5 @@
 import { useId } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/Button/Button';
 import { ModalDialog } from '@/components/ui/ModalDialog';
 import styles from './MigrationStep.module.css';
 
@@ -21,7 +20,13 @@ export function MigrationSuccess({ vaultCount, email, onDone }: MigrationSuccess
     <ModalDialog labelledById={titleId} onClose={onDone}>
       <div className={styles.centered}>
         <span className={styles.successMark}>
-          <Icon name="check" size={28} />
+          <span
+            className="material-symbols-rounded"
+            aria-hidden="true"
+            style={{ fontSize: '1.75rem' }}
+          >
+            check
+          </span>
         </span>
         <h2 id={titleId} className={styles.title}>
           Your vaults are backed up
@@ -30,7 +35,7 @@ export function MigrationSuccess({ vaultCount, email, onDone }: MigrationSuccess
           {linked} now linked to your account. Sign in on any device to pick up where you left off.
         </p>
       </div>
-      <Button isFullWidth onClick={onDone}>
+      <Button variant="primary" size="large" className={styles.action} onClick={onDone}>
         Open my vaults
       </Button>
       <p className={styles.signedInAs}>Signed in as {email}</p>

@@ -7,6 +7,7 @@ import {
   setCsrfCookie,
   setSessionCookie
 } from '@/server/auth/authCookies';
+import { logUnexpectedError } from '@/lib/logging/logger';
 import { readSessionClaims } from '@/server/auth/jwtClaims';
 import {
   generateCsrfToken,
@@ -144,13 +145,19 @@ export async function postToApi(
 function sessionResponse(upstreamBody: string): NextResponse {
   const issued = parseIssuedToken(upstreamBody);
   if (issued === null) {
-    console.error('[atlas-server] the API answered a session request with an unexpected body');
+    logUnexpectedError(
+      'session',
+      new Error('The API answered a session request with an unexpected body')
+    );
     return problemResponse(502, 'The service gave an unexpected answer.');
   }
 
   const claims = readSessionClaims(issued.accessToken);
   if (claims === null) {
-    console.error('[atlas-server] the API issued an access token that could not be read');
+    logUnexpectedError(
+      'session',
+      new Error('The API issued an access token that could not be read')
+    );
     return problemResponse(502, 'The service gave an unexpected answer.');
   }
 

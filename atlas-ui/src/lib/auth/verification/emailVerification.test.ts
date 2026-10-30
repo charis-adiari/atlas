@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAuthState, resetAuthState } from '@/lib/auth/session/authSessionStore';
+import { AuthStatus, getAuthState, resetAuthState } from '@/lib/auth/session/authSessionStore';
 import { HttpMock, jsonReply, problemReply } from '@/test/HttpMock';
 import {
   API_EMAIL_VERIFICATION,
@@ -69,7 +69,7 @@ describe('the provider backed by the API', () => {
     // Assert
     expect(isVerified).toBe(true);
     expect(http.handler.mock.calls[0][0].path).toBe('/auth/session');
-    expect(getAuthState().status).toBe('authenticated');
+    expect(getAuthState().status).toBe(AuthStatus.authenticated);
     expect(getAuthState().session?.user).toEqual(user);
   });
 
@@ -82,6 +82,6 @@ describe('the provider backed by the API', () => {
 
     // Assert
     expect(isVerified).toBe(false);
-    expect(getAuthState().status).toBe('loading');
+    expect(getAuthState().status).toBe(AuthStatus.loading);
   });
 });

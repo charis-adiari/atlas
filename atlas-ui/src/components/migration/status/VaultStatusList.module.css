@@ -1,8 +1,8 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 220px;
+  gap: 0.5rem;
+  max-height: 13.75rem;
   overflow-y: auto;
   list-style: none;
 }
@@ -10,10 +10,10 @@
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0.625rem;
   background: var(--input-surface);
 }
 
@@ -21,8 +21,8 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 1.25rem;
+  height: 1.25rem;
   color: var(--muted);
 }
 
@@ -41,8 +41,8 @@
 }
 
 .spinner {
-  width: 18px;
-  height: 18px;
+  width: 1.125rem;
+  height: 1.125rem;
   border: 2px solid var(--border-strong);
   border-top-color: var(--primary-link);
   border-radius: 50%;

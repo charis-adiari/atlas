@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import { verifyEmail } from '@/lib/api/authApi';
 import { beginSession } from '@/lib/auth/session/sessionService';
 import { logUnexpectedError } from '@/lib/logging/logger';

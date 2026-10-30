@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAuthState, resetAuthState } from '@/lib/auth/session/authSessionStore';
+import { AuthStatus, getAuthState, resetAuthState } from '@/lib/auth/session/authSessionStore';
 import { ACCOUNT_NOT_CREATED_MESSAGE, INVALID_DETAILS_MESSAGE } from '@/lib/auth/signupErrors';
 import { setEmailVerificationProvider } from '@/lib/auth/verification/emailVerification';
 import { setErrorLogSink } from '@/lib/logging/logger';
@@ -599,7 +599,7 @@ describe('token expiry', () => {
     // Assert
     expect(await screen.findByRole('button', { name: 'Sign up' })).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /signed in as/i })).not.toBeInTheDocument();
-    expect(getAuthState()).toMatchObject({ status: 'anonymous', endReason: 'expired' });
+    expect(getAuthState()).toMatchObject({ status: AuthStatus.anonymous, endReason: 'expired' });
     expect(screen.getByRole('status')).toHaveTextContent('Session expired');
   });
 
@@ -630,7 +630,7 @@ describe('token expiry', () => {
     await screen.findByRole('dialog', { name: INTERRUPTED_TITLE });
 
     // Assert
-    expect(getAuthState()).toMatchObject({ status: 'anonymous', endReason: 'expired' });
+    expect(getAuthState()).toMatchObject({ status: AuthStatus.anonymous, endReason: 'expired' });
     expect(api.countRequests(MIGRATE_PATH)).toBe(1);
     expect(api.getVaultOwnerIds()).toEqual([]);
     expect(window.localStorage.getItem(LOCAL_VAULT_DATA_KEY)).toBe(storedData);

@@ -1,4 +1,3 @@
-import { Icon } from '@/components/ui/Icon';
 import styles from './FormAlert.module.css';
 
 interface FormAlertProps {
@@ -11,7 +10,13 @@ interface FormAlertProps {
 export function FormAlert({ message }: FormAlertProps) {
   return (
     <p role="alert" className={styles.alert}>
-      <Icon name="alert" size={18} />
+      <span
+        className="material-symbols-rounded"
+        aria-hidden="true"
+        style={{ fontSize: '1.125rem' }}
+      >
+        error
+      </span>
       <span>{message}</span>
     </p>
   );

@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/Button/Button';
 import { signOut } from '@/lib/auth/session/sessionService';
 import { logUnexpectedError } from '@/lib/logging/logger';
 import styles from './LogoutButton.module.css';
@@ -28,7 +28,7 @@ export function LogoutButton() {
 
   return (
     <>
-      <Button variant="secondary" onClick={logOut}>
+      <Button variant="outline" onClick={logOut}>
         Log out
       </Button>
       {hasFailed && (

@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { NextResponse } from 'next/server';
+import { logUnexpectedError } from '@/lib/logging/logger';
 import { getApiOrigin } from '@/server/config';
 import { NO_STORE_HEADERS } from '@/server/security/problem';
 
@@ -36,8 +37,10 @@ export async function callUpstream(
   try {
     return await upstreamClient.request<string>(config);
   } catch (error) {
-    const reason = axios.isAxiosError(error) ? (error.code ?? error.message) : String(error);
-    console.error('[atlas-server] upstream call failed', { url: config.url, reason });
+    logUnexpectedError('upstream', error, {
+      method: config.method?.toUpperCase(),
+      path: config.url
+    });
     return null;
   }
 }

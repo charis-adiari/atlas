@@ -5,10 +5,10 @@
 .mark {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  margin: 0 auto 20px;
-  border-radius: 16px;
+  width: 3.625rem;
+  height: 3.625rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 1rem;
   background: #241a45;
   color: var(--primary-link);
 }
@@ -20,7 +20,7 @@
 }
 
 .text {
-  margin: 10px 0 22px;
+  margin: 0.625rem 0 1.375rem;
   color: var(--muted);
   line-height: 1.45;
 }
@@ -31,7 +31,7 @@
 
 .link {
   display: block;
-  margin: 16px auto 0;
+  margin: 1rem auto 0;
   padding: 0;
   border: 0;
   background: none;
@@ -47,11 +47,16 @@
 }
 
 .note {
-  margin-top: 22px;
-  padding-top: 18px;
+  margin-top: 1.375rem;
+  padding-top: 1.125rem;
   border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 0.85rem;
   line-height: 1.45;
   text-align: center;
+}
+
+.action {
+  justify-content: center;
+  width: 100%;
 }

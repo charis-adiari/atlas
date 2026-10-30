@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Icon } from '@/components/ui/Icon';
 import {
   useVerifyEmailLink,
   type VerifyEmailLinkStatus
@@ -34,7 +33,13 @@ export function VerifyEmailPage() {
     <div className={styles.main}>
       <section className={styles.card} aria-live="polite">
         <span className={status === 'failed' ? styles.markFailed : styles.mark}>
-          <Icon name={status === 'failed' ? 'alert' : 'check'} size={26} />
+          <span
+            className="material-symbols-rounded"
+            aria-hidden="true"
+            style={{ fontSize: '1.625rem' }}
+          >
+            {status === 'failed' ? 'error' : 'check'}
+          </span>
         </span>
         <h1 className={styles.title}>{title}</h1>
         <p className={styles.text}>{message}</p>

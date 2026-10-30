@@ -1,5 +1,4 @@
 import { useId, useState, type ChangeEvent } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import styles from './Field.module.css';
 
 interface PasswordFieldProps {
@@ -57,7 +56,13 @@ export function PasswordField({
           aria-pressed={isPasswordVisible}
           onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
         >
-          <Icon name={isPasswordVisible ? 'eyeOff' : 'eye'} />
+          <span
+            className="material-symbols-rounded"
+            aria-hidden="true"
+            style={{ fontSize: '1.25rem' }}
+          >
+            {isPasswordVisible ? 'visibility_off' : 'visibility'}
+          </span>
         </button>
       </div>
       {errorMessage !== null && (

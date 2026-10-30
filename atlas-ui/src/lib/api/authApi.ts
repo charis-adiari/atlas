@@ -5,7 +5,7 @@ import type {
   SignupRequest,
   SignupResponse
 } from '@/types/auth';
-import { ApiError } from './ApiError';
+import { ApiError } from './apiError';
 import { UNKNOWN_ERROR_MESSAGE, httpClient } from './httpClient';
 
 export const EMAIL_NOT_VERIFIED_MESSAGE = 'Verify your email address before signing in.';

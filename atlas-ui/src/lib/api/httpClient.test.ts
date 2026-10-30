@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HttpMock, TEST_CSRF_TOKEN, jsonReply, problemReply } from '@/test/HttpMock';
-import { ApiError } from './ApiError';
+import { ApiError } from './apiError';
 import { fetchSession, login, logout, signup } from './authApi';
 import {
   NETWORK_ERROR_MESSAGE,

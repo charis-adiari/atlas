@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import {
   CONNECTION_PROBLEM_MESSAGE,
   ACCOUNT_NOT_CREATED_MESSAGE,

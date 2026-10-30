@@ -13,6 +13,29 @@
   --accent: hsl(143, 71%, 58%);
 
   --workspace-x-padding: 1rem;
+
+  /* Tokens used by the account, signup, verification and migration screens. */
+  --surface: #0c111d;
+  --surface-raised: #121828;
+  --input-surface: #090d17;
+  --border: #1c2438;
+  --border-strong: #2a3349;
+  --muted: #8a93aa;
+  --primary-hover: #8b52f0;
+  --primary-link: #a78bfa;
+  --primary-contrast: #ffffff;
+  --brand-amber: #f5b53a;
+  --focus-ring: #a78bfa;
+  --focus-halo: rgb(124 58 237 / 28%);
+  --disabled-surface: #1a2033;
+  --disabled-text: #626b84;
+  --success: #34d399;
+  --success-surface: #0e2a21;
+  --success-border: #1b5a43;
+  --warning: #f5c451;
+  --warning-surface: #2a2010;
+  --warning-border: #6b4e1a;
+  --danger: #f87171;
 }
 
 html {

@@ -1,5 +1,5 @@
 import type { MigrationRequest } from '@/types/migration';
-import { ApiError } from './ApiError';
+import { ApiError } from './apiError';
 import { httpClient } from './httpClient';
 
 export const MIGRATION_TIMEOUT_MS = 60_000;

@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/Button/Button';
 import { ModalDialog } from '@/components/ui/ModalDialog';
 import { formatVaultSummary, summarizeVaultData } from '@/lib/migration/local/vaultSummary';
 import type { MigrationRequest } from '@/types/migration';
@@ -32,10 +32,10 @@ export function MigrationPrompt({ data, onConfirm, onDecline }: MigrationPromptP
         only, it won&apos;t be linked to your account.
       </p>
       <div className={styles.actions}>
-        <Button isFullWidth onClick={onConfirm}>
+        <Button variant="primary" size="large" className={styles.action} onClick={onConfirm}>
           Migrate my vaults
         </Button>
-        <Button variant="secondary" isFullWidth onClick={onDecline}>
+        <Button variant="outline" size="large" className={styles.action} onClick={onDecline}>
           Keep on this device only
         </Button>
       </div>

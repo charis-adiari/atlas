@@ -1,4 +1,3 @@
-import { Icon } from '@/components/ui/Icon';
 import type { VaultPayload } from '@/types/migration';
 import styles from './VaultStatusList.module.css';
 
@@ -27,9 +26,23 @@ export function VaultStatusList({ vaults, status }: VaultStatusListProps) {
         <li key={vault.id} className={styles.row}>
           <span className={styles.marker} aria-hidden="true">
             {status === 'uploading' && <span className={styles.spinner} />}
-            {status === 'uploaded' && <Icon name="check" size={14} />}
+            {status === 'uploaded' && (
+              <span
+                className="material-symbols-rounded"
+                aria-hidden="true"
+                style={{ fontSize: '0.875rem' }}
+              >
+                check
+              </span>
+            )}
             {(status === 'not-uploaded' || status === 'not-confirmed') && (
-              <Icon name="minus" size={18} />
+              <span
+                className="material-symbols-rounded"
+                aria-hidden="true"
+                style={{ fontSize: '1.125rem' }}
+              >
+                remove
+              </span>
             )}
           </span>
           <span className={styles.name}>{vault.name}</span>

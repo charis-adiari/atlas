@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { MigrationResult } from '@/components/migration/MigrationFlow';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { readUnmigratedVaultData } from '@/lib/migration/local/localVaultData';
-import type { AuthSession } from '@/lib/auth/session/authSessionStore';
+import { AuthStatus, type AuthSession } from '@/lib/auth/session/authSessionStore';
 import type { SignupResponse } from '@/types/auth';
 import type { MigrationRequest } from '@/types/migration';
 
@@ -26,7 +26,7 @@ export interface AccountToast {
  * Represents everything the account controls need to render and react.
  */
 export interface UseAccountFlowResult {
-  status: 'loading' | 'authenticated' | 'anonymous';
+  status: AuthStatus;
   session: AuthSession | null;
   isSignupOpen: boolean;
   verificationEmail: string | null;
@@ -56,7 +56,7 @@ export function useAccountFlow(): UseAccountFlowResult {
   const [hasDismissedExpiry, setHasDismissedExpiry] = useState(false);
 
   const isExpiryNoticeVisible =
-    status === 'anonymous' && endReason === 'expired' && !hasDismissedExpiry;
+    status === AuthStatus.anonymous && endReason === 'expired' && !hasDismissedExpiry;
 
   function continueAfterSignup(): void {
     const localData = readUnmigratedVaultData();

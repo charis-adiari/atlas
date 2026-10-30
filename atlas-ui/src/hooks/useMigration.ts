@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import { getAuthState } from '@/lib/auth/session/authSessionStore';
 import { logUnexpectedError } from '@/lib/logging/logger';
 import {

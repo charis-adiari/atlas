@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import { NETWORK_ERROR_STATUS } from '@/lib/api/httpClient';
 
 export const ACCOUNT_NOT_CREATED_MESSAGE =

@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 
 const MAX_TEXT_LENGTH = 300;
 
@@ -35,9 +35,14 @@ export function setErrorLogSink(next: ErrorLogSink | null): void {
  *
  * @param context where it happened, such as "signup" or "migration"
  * @param error whatever was thrown
+ * @param request the request that failed, when the error came from calling the API
  */
-export function logUnexpectedError(context: string, error: unknown): void {
-  sink({ ...describeError(error), context, loggedAt: new Date().toISOString() });
+export function logUnexpectedError(
+  context: string,
+  error: unknown,
+  request?: Pick<ErrorLogEntry, 'method' | 'path'>
+): void {
+  sink({ ...describeError(error), ...request, context, loggedAt: new Date().toISOString() });
 }
 
 /**
@@ -66,7 +71,8 @@ function truncate(text: string): string {
 }
 
 /**
- * Writes an entry to the browser console, which is where logs go until a sink is set.
+ * Writes an entry to the console, which is where logs go until a sink is set: the browser console on the page, and the
+ * server log in the app server's route handlers.
  */
 function writeToConsole(entry: ErrorLogEntry): void {
   console.error('[atlas]', entry);

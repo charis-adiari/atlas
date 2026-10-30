@@ -31,4 +31,15 @@
   &:has(> .icon:first-child + *) {
     padding-left: 0.875rem;
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    background: var(--background-light-3);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
 }

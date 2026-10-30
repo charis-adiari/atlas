@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { FormAlert } from '@/components/feedback/FormAlert';
 import { EmailField } from '@/components/signup/fields/EmailField';
-import { Button } from '@/components/ui/Button';
-import { ApiError } from '@/lib/api/ApiError';
+import { Button } from '@/components/Button/Button';
+import { ApiError } from '@/lib/api/apiError';
 import { NETWORK_ERROR_STATUS } from '@/lib/api/httpClient';
 import { getEmailVerificationProvider } from '@/lib/auth/verification/emailVerification';
 import {
@@ -67,7 +67,13 @@ export function ResendVerificationForm() {
         onBlur={() => setHasBlurred(true)}
       />
       {formError !== null && <FormAlert message={formError} />}
-      <Button type="submit" isFullWidth disabled={isSubmitting}>
+      <Button
+        variant="primary"
+        size="large"
+        className={styles.action}
+        type="submit"
+        disabled={isSubmitting}
+      >
         {isSubmitting ? 'Sending…' : 'Send a new link'}
       </Button>
     </form>

@@ -1,9 +1,10 @@
 'use client';
 
+import { AuthStatus } from '@/lib/auth/session/authSessionStore';
 import { Toast } from '@/components/feedback/Toast';
 import { MigrationFlow } from '@/components/migration/MigrationFlow';
 import { SignupModal } from '@/components/signup/SignupModal';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/Button/Button';
 import { CheckInboxDialog } from '@/components/verification/CheckInboxDialog';
 import { useAccountFlow } from '@/hooks/useAccountFlow';
 import styles from './AuthEntry.module.css';
@@ -20,13 +21,17 @@ export function AuthEntry() {
 
   return (
     <>
-      {flow.status === 'authenticated' && flow.session !== null && (
+      {flow.status === AuthStatus.authenticated && flow.session !== null && (
         <div className={styles.controls}>
           <AccountChip email={flow.session.user.email} />
           <LogoutButton />
         </div>
       )}
-      {flow.status === 'anonymous' && <Button onClick={flow.openSignup}>Sign up</Button>}
+      {flow.status === AuthStatus.anonymous && (
+        <Button variant="primary" onClick={flow.openSignup}>
+          Sign up
+        </Button>
+      )}
       {flow.isSignupOpen && (
         <SignupModal onClose={flow.closeSignup} onSuccess={flow.handleSignupSuccess} />
       )}

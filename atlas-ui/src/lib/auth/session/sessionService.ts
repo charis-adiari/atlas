@@ -1,12 +1,18 @@
 import { fetchSession, logout } from '@/lib/api/authApi';
 import { resetCsrfToken, setUnauthorizedHandler } from '@/lib/api/httpClient';
 import type { SessionStart } from '@/types/auth';
-import { claimSessionRestore, endSession, getAuthState, startSession } from './authSessionStore';
+import {
+  AuthStatus,
+  claimSessionRestore,
+  endSession,
+  getAuthState,
+  startSession
+} from './authSessionStore';
 
 const MILLIS_PER_SECOND = 1000;
 
 setUnauthorizedHandler(() => {
-  if (getAuthState().status === 'authenticated') {
+  if (getAuthState().status === AuthStatus.authenticated) {
     endSession('expired');
   }
 });
@@ -49,7 +55,7 @@ export async function ensureSessionRestored(): Promise<void> {
   }
   try {
     const session = await fetchSession();
-    if (getAuthState().status !== 'loading') {
+    if (getAuthState().status !== AuthStatus.loading) {
       return;
     }
     if (session === null) {
@@ -58,7 +64,7 @@ export async function ensureSessionRestored(): Promise<void> {
       startSession(session.user, session.expiresAt);
     }
   } catch {
-    if (getAuthState().status === 'loading') {
+    if (getAuthState().status === AuthStatus.loading) {
       endSession(null);
     }
   }

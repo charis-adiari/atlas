@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { FormAlert } from '@/components/feedback/FormAlert';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/Button/Button';
 import { useSignupForm } from '@/hooks/signup/useSignupForm';
 import type { SignupResponse } from '@/types/auth';
 import { EmailField } from './fields/EmailField';
@@ -46,7 +46,13 @@ export function SignupForm({ onSuccess }: SignupFormProps) {
         onBlur={form.blurConfirmPassword}
       />
       {form.formError !== null && <FormAlert message={form.formError} />}
-      <Button type="submit" isFullWidth disabled={!form.canSubmit}>
+      <Button
+        variant="primary"
+        size="large"
+        className={styles.action}
+        type="submit"
+        disabled={!form.canSubmit}
+      >
         {form.isSubmitting ? 'Creating account…' : 'Create account'}
       </Button>
     </form>

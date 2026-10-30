@@ -1,5 +1,4 @@
 import { useId } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import { ModalDialog } from '@/components/ui/ModalDialog';
 import type { SignupResponse } from '@/types/auth';
 import { SignupForm } from './SignupForm';
@@ -34,7 +33,13 @@ export function SignupModal({ onClose, onSuccess, onLoginClick }: SignupModalPro
         </p>
       )}
       <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
-        <Icon name="close" />
+        <span
+          className="material-symbols-rounded"
+          aria-hidden="true"
+          style={{ fontSize: '1.25rem' }}
+        >
+          close
+        </span>
       </button>
     </ModalDialog>
   );

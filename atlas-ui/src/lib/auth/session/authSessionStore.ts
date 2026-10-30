@@ -1,6 +1,14 @@
 import type { UserDto } from '@/types/auth';
 
-export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
+/** Whether the visitor is signed in */
+export enum AuthStatus {
+  /** The session has not been checked yet */
+  loading = 'loading',
+  /** The visitor is signed in */
+  authenticated = 'authenticated',
+  /** The visitor is not signed in */
+  anonymous = 'anonymous'
+}
 export type SessionEndReason = 'expired' | 'signed-out';
 
 /**
@@ -21,7 +29,7 @@ export interface AuthState {
   endReason: SessionEndReason | null;
 }
 
-const INITIAL_STATE: AuthState = { status: 'loading', session: null, endReason: null };
+const INITIAL_STATE: AuthState = { status: AuthStatus.loading, session: null, endReason: null };
 const MAX_TIMER_MS = 2_147_483_647;
 const listeners = new Set<() => void>();
 
@@ -62,7 +70,7 @@ export function subscribeToAuth(listener: () => void): () => void {
  * @returns true if the caller should go and check
  */
 export function claimSessionRestore(): boolean {
-  if (isRestoreInProgress || state.status !== 'loading') {
+  if (isRestoreInProgress || state.status !== AuthStatus.loading) {
     return false;
   }
   isRestoreInProgress = true;
@@ -83,7 +91,7 @@ export function startSession(user: UserDto, expiresAt: number): void {
     endSession('expired');
     return;
   }
-  setState({ status: 'authenticated', session: { user, expiresAt }, endReason: null });
+  setState({ status: AuthStatus.authenticated, session: { user, expiresAt }, endReason: null });
   scheduleExpiry(expiresAt);
 }
 
@@ -93,7 +101,7 @@ export function startSession(user: UserDto, expiresAt: number): void {
 export function endSession(reason: SessionEndReason | null): void {
   clearExpiryTimer();
   isRestoreInProgress = false;
-  setState({ status: 'anonymous', session: null, endReason: reason });
+  setState({ status: AuthStatus.anonymous, session: null, endReason: reason });
 }
 
 /**

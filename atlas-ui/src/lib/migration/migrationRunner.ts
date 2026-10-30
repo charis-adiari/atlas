@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api/ApiError';
+import { ApiError } from '@/lib/api/apiError';
 import { NETWORK_ERROR_STATUS, UNKNOWN_ERROR_MESSAGE } from '@/lib/api/httpClient';
 import { isAlreadyMigrated, migrateVaults } from '@/lib/api/migrationApi';
 import type { MigrationRequest } from '@/types/migration';
