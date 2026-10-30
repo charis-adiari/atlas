@@ -57,3 +57,7 @@ nb-configuration.xml
 
 *.log
 log
+
+# JWT signing and verification keys (dev only, see README)
+src/main/resources/privateKey.pem
+src/main/resources/publicKey.pem

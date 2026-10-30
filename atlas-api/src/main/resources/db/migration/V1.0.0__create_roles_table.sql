@@ -8,4 +8,4 @@ CREATE TABLE roles (
     CONSTRAINT uq_roles_name UNIQUE (name)
 );
 
--- rollback: DROP TABLE IF EXISTS roles;
+-- rollback: DROP TABLE IF EXISTS roles;
