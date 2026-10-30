@@ -1,0 +1,12 @@
+.error {
+  position: fixed;
+  top: 4.5rem;
+  right: 1.5rem;
+  max-width: 20rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--warning-border);
+  border-radius: 0.625rem;
+  background: var(--warning-surface);
+  color: var(--warning);
+  font-size: 0.85rem;
+}

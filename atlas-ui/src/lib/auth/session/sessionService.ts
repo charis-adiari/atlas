@@ -1,0 +1,83 @@
+import { fetchSession, logout } from '@/lib/api/authApi';
+import { resetCsrfToken, setUnauthorizedHandler } from '@/lib/api/httpClient';
+import type { SessionStart } from '@/types/auth';
+import {
+  AuthStatus,
+  claimSessionRestore,
+  endSession,
+  getAuthState,
+  startSession
+} from './authSessionStore';
+
+const MILLIS_PER_SECOND = 1000;
+
+setUnauthorizedHandler(() => {
+  if (getAuthState().status === AuthStatus.authenticated) {
+    endSession('expired');
+  }
+});
+
+/**
+ * Marks the user as signed in after the server accepted a login or an email verification. The server has already
+ * stored the access token in a cookie and replaced the CSRF token, so the page only keeps who signed in and until when.
+ */
+export function beginSession(response: SessionStart): void {
+  resetCsrfToken();
+  startSession(response.user, Date.now() + response.expiresIn * MILLIS_PER_SECOND);
+}
+
+/**
+ * Asks the server again whether the browser has a session cookie and, if it has, marks the user as signed in. This is
+ * how a page learns that another tab started a session, for example by opening the emailed verification link. The CSRF
+ * token is fetched again too, because starting a session replaces it.
+ *
+ * @returns true if there is a session
+ * @throws ApiError if the request failed for any reason other than there being no session
+ */
+export async function refreshSession(): Promise<boolean> {
+  const session = await fetchSession();
+  if (session === null) {
+    return false;
+  }
+  resetCsrfToken();
+  startSession(session.user, session.expiresAt);
+  return true;
+}
+
+/**
+ * Finds out whether the browser already has a valid session cookie, which is how a signed-in user stays signed in
+ * across reloads. It only checks once; a failed check leaves the visitor anonymous, and an answer that arrives after the
+ * state has already changed is ignored.
+ */
+export async function ensureSessionRestored(): Promise<void> {
+  if (!claimSessionRestore()) {
+    return;
+  }
+  try {
+    const session = await fetchSession();
+    if (getAuthState().status !== AuthStatus.loading) {
+      return;
+    }
+    if (session === null) {
+      endSession(null);
+    } else {
+      startSession(session.user, session.expiresAt);
+    }
+  } catch {
+    if (getAuthState().status === AuthStatus.loading) {
+      endSession(null);
+    }
+  }
+}
+
+/**
+ * Ends the session: the server clears the cookie, then the page forgets the user. If the server cannot be reached the
+ * user stays signed in, because the cookie would still be valid, and the error is thrown so they can be told.
+ *
+ * @throws ApiError if the server could not be asked to end the session
+ */
+export async function signOut(): Promise<void> {
+  await logout();
+  resetCsrfToken();
+  endSession('signed-out');
+}

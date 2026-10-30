@@ -1,3 +1,4 @@
+import { AuthEntry } from '@/components/account/AuthEntry';
 import { Button } from '@/components/Button/Button';
 import styles from './Header.module.css';
 
@@ -24,7 +25,7 @@ export const Header = () => {
           <span className={styles.statusIcon}></span>
           <span>All changes saved</span>
         </div>
-        <Button variant="primary">Log in</Button>
+        <AuthEntry />
       </div>
     </header>
   );

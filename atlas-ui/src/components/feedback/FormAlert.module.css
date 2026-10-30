@@ -1,0 +1,12 @@
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--danger);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.alert :global(.material-symbols-rounded) {
+  flex: none;
+}
