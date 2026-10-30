@@ -1,9 +1,9 @@
 package com.musketeers.service;
 
 import com.musketeers.domain.EmailVerificationToken;
-import com.musketeers.domain.User;
+import com.musketeers.domain.auth.User;
 import com.musketeers.repository.EmailVerificationTokenRepository;
-import com.musketeers.repository.UserRepository;
+import com.musketeers.repository.auth.UserRepository;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import jakarta.persistence.EntityNotFoundException;
@@ -20,18 +20,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class EmailVerificationServiceTests {

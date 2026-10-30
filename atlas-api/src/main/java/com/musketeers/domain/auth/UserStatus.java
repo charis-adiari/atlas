@@ -1,4 +1,4 @@
-package com.musketeers.domain;
+package com.musketeers.domain.auth;
 
 /**
  * Represents the status of a user account.

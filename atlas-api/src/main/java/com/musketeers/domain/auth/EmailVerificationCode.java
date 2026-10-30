@@ -1,4 +1,4 @@
-package com.musketeers.domain;
+package com.musketeers.domain.auth;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -37,4 +37,16 @@ public class EmailVerificationCode {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     public Instant createdAt;
+
+    public EmailVerificationCode(
+            UUID userId,
+            byte[] codeHash,
+            Instant expiresAt) {
+        this.userId = userId;
+        this.codeHash = codeHash;
+        this.expiresAt = expiresAt;
+    }
+
+    public EmailVerificationCode() {
+    }
 }

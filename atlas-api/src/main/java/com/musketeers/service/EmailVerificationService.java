@@ -1,9 +1,9 @@
 package com.musketeers.service;
 
 import com.musketeers.domain.EmailVerificationToken;
-import com.musketeers.domain.User;
+import com.musketeers.domain.auth.User;
 import com.musketeers.repository.EmailVerificationTokenRepository;
-import com.musketeers.repository.UserRepository;
+import com.musketeers.repository.auth.UserRepository;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import jakarta.enterprise.context.ApplicationScoped;

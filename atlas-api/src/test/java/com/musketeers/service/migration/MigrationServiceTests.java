@@ -1,18 +1,10 @@
 package com.musketeers.service.migration;
 
 import com.musketeers.api.vaults.mappers.MigrationMapperImpl;
-import com.musketeers.domain.User;
-import com.musketeers.domain.vault.Backlink;
-import com.musketeers.domain.vault.FileType;
-import com.musketeers.domain.vault.Folder;
-import com.musketeers.domain.vault.Vault;
-import com.musketeers.domain.vault.VaultFile;
-import com.musketeers.dto.migration.BacklinkDto;
-import com.musketeers.dto.migration.FileDto;
-import com.musketeers.dto.migration.FolderDto;
-import com.musketeers.dto.migration.MigrationRequest;
-import com.musketeers.dto.migration.VaultDto;
-import com.musketeers.repository.UserRepository;
+import com.musketeers.domain.auth.User;
+import com.musketeers.domain.vault.*;
+import com.musketeers.dto.migration.*;
+import com.musketeers.repository.auth.UserRepository;
 import com.musketeers.repository.vault.BacklinkRepository;
 import com.musketeers.repository.vault.FileRepository;
 import com.musketeers.repository.vault.FolderRepository;
@@ -24,11 +16,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Captor;
-import org.mockito.InOrder;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
@@ -36,18 +24,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class MigrationServiceTests {
@@ -249,7 +227,7 @@ public class MigrationServiceTests {
         // Arrange
         when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
         PersistenceException duplicate = new PersistenceException(mock(ConstraintViolationException.class));
-        doThrow(duplicate).when(vaultRepository).persist(ArgumentMatchers.<Vault>anyList());
+        doThrow(duplicate).when(vaultRepository).persist(ArgumentMatchers.anyList());
 
         // Act
         IllegalArgumentException ex = assertThrows(
@@ -264,7 +242,7 @@ public class MigrationServiceTests {
         // Arrange
         when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
         doThrow(mock(ConstraintViolationException.class)).when(vaultRepository)
-                .persist(ArgumentMatchers.<Vault>anyList());
+                .persist(ArgumentMatchers.anyList());
 
         // Act
         IllegalArgumentException ex = assertThrows(
@@ -279,7 +257,7 @@ public class MigrationServiceTests {
         // Arrange
         when(userRepository.findById(USER_ID)).thenReturn(verifiedUser());
         PersistenceException failure = new PersistenceException("connection lost");
-        doThrow(failure).when(vaultRepository).persist(ArgumentMatchers.<Vault>anyList());
+        doThrow(failure).when(vaultRepository).persist(ArgumentMatchers.anyList());
 
         // Act
         PersistenceException thrown = assertThrows(

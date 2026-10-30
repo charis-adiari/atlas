@@ -1,4 +1,4 @@
-package com.musketeers.service;
+package com.musketeers.service.auth;
 
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;

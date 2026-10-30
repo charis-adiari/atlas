@@ -1,6 +1,6 @@
-package com.musketeers.service;
+package com.musketeers.service.auth;
 
-import com.musketeers.domain.User;
+import com.musketeers.domain.auth.User;
 import io.smallrye.jwt.build.Jwt;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;

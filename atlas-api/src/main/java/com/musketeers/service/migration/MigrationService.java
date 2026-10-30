@@ -1,14 +1,14 @@
 package com.musketeers.service.migration;
 
 import com.musketeers.api.vaults.mappers.MigrationMapper;
-import com.musketeers.domain.User;
+import com.musketeers.domain.auth.User;
 import com.musketeers.domain.vault.Backlink;
 import com.musketeers.domain.vault.Folder;
 import com.musketeers.domain.vault.Vault;
 import com.musketeers.domain.vault.VaultFile;
 import com.musketeers.dto.migration.FileDto;
 import com.musketeers.dto.migration.MigrationRequest;
-import com.musketeers.repository.UserRepository;
+import com.musketeers.repository.auth.UserRepository;
 import com.musketeers.repository.vault.BacklinkRepository;
 import com.musketeers.repository.vault.FileRepository;
 import com.musketeers.repository.vault.FolderRepository;

@@ -1,13 +1,13 @@
 package com.musketeers.api;
 
 import com.musketeers.api.vaults.VaultController;
-import com.musketeers.domain.User;
+import com.musketeers.domain.auth.User;
 import com.musketeers.domain.vault.FileType;
 import com.musketeers.domain.vault.Folder;
 import com.musketeers.domain.vault.Vault;
 import com.musketeers.domain.vault.VaultFile;
-import com.musketeers.repository.UserRepository;
-import com.musketeers.service.TokenService;
+import com.musketeers.repository.auth.UserRepository;
+import com.musketeers.service.auth.TokenService;
 import com.musketeers.service.migration.MigrationService;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
@@ -21,20 +21,11 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.emptyOrNullString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -248,7 +239,7 @@ public class VaultControllerIntegrationTests {
     void migrate_WhenAListHasANullEntry_Returns400() {
         User user = createUser("ada@example.com");
 
-        migrate(tokenFor(user), Map.of("vaults", Arrays.asList((Object) null)))
+        migrate(tokenFor(user), Map.of("vaults", Collections.singletonList(null)))
                 .statusCode(400)
                 .contentType(PROBLEM_JSON)
                 .body("detail", containsString("empty entry"));

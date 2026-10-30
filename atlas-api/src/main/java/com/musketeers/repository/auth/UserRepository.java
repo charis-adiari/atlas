@@ -1,6 +1,6 @@
-package com.musketeers.repository;
+package com.musketeers.repository.auth;
 
-import com.musketeers.domain.User;
+import com.musketeers.domain.auth.User;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -17,6 +17,6 @@ public class UserRepository implements PanacheRepositoryBase<User, UUID> {
      * @return the user, or null if no account uses the address
      */
     public User findByEmailIgnoreCase(String email) {
-        return find("lower(email) = :email", Map.<String, Object>of("email", email.toLowerCase(Locale.ROOT))).firstResult();
+        return find("lower(email) = :email", Map.of("email", email.toLowerCase(Locale.ROOT))).firstResult();
     }
 }

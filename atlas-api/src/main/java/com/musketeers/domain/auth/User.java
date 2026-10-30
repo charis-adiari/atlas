@@ -1,4 +1,4 @@
-package com.musketeers.domain;
+package com.musketeers.domain.auth;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;

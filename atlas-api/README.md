@@ -34,9 +34,17 @@ This project uses Java Quarkus.
 
    Put the first printed line (a single line, without the `-----BEGIN` and `-----END` lines) after
    `ACCESS_TOKEN_PRIVATE_KEY=` in `.env`, and the second after `ACCESS_TOKEN_PUBLIC_KEY=`. Then delete the two `.pem`
-   files. In production, have the secret manager (for example Azure Key Vault) provide these two variables. The app
-   refuses to start if either is missing. Tests use their own throw-away pair, written directly in the `%test` section
-   of `application.yml`.
+   files. The app refuses to start if either is missing. Tests use their own throw-away pair, written directly in the 
+   `%test` section of `application.yml`.
+1. Generating the pepper for email verification codes: email verification codes are hashed with HMAC-SHA256 using a
+   secret key (the "pepper"). It must be 32 random bytes, Base64-encoded, and supplied through the
+   `VERIFICATION_CODE_PEPPER` environment variable. 
+
+    ```bash
+    openssl rand -base64 32
+    ```
+
+    The output is a 44-character string ending in =, for example q3Zk...=.
 
 ## Email Verification
 
@@ -133,4 +141,4 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
   e.g. `getUsers_WhenUserIsNotAdmin_ReturnsForbidden`, `getUsers_ReturnsUsers`, etc.
 - Every test, excluding integration tests, must include AAA comments (`// Arrange`, `// Act`, `// Assert`) marking
   each section, unless the section is empty.
-- A test coverage of 80% must be maintained
+- A test coverage of 80% must be maintained

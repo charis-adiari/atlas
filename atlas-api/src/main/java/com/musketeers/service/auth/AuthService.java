@@ -1,8 +1,9 @@
-package com.musketeers.service;
+package com.musketeers.service.auth;
 
-import com.musketeers.domain.User;
+import com.musketeers.domain.auth.User;
 import com.musketeers.dto.SignupResponse;
-import com.musketeers.repository.UserRepository;
+import com.musketeers.repository.auth.UserRepository;
+import com.musketeers.service.EmailVerificationService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
@@ -23,17 +24,20 @@ public class AuthService {
     private final PasswordHasher hasher;
     private final TokenService tokenService;
     private final EmailVerificationService emailVerificationService;
+    private final VerificationCodeService verificationCodeService;
 
     public AuthService(
             UserRepository repository,
             PasswordHasher hasher,
             TokenService tokenService,
-            EmailVerificationService emailVerificationService
+            EmailVerificationService emailVerificationService,
+            VerificationCodeService verificationCodeService
     ) {
         this.repository = repository;
         this.hasher = hasher;
         this.tokenService = tokenService;
         this.emailVerificationService = emailVerificationService;
+        this.verificationCodeService = verificationCodeService;
     }
 
     /**
@@ -62,7 +66,7 @@ public class AuthService {
         user.passwordHash = hash;
         save(user);
 
-        sendVerification(user);
+//        sendVerification(user);
 
         return new SignupResponse(tokenService.issue(user), TOKEN_TYPE, tokenService.getTtlSeconds());
     }
@@ -93,5 +97,10 @@ public class AuthService {
     private void sendVerification(User user) {
         String token = emailVerificationService.createToken(user);
         emailVerificationService.sendEmail(user, token);
+    }
+
+    private void sendVerificationCode(User user) {
+        String code = verificationCodeService.generateCode(user.id);
+
     }
 }
