@@ -2,9 +2,11 @@
 
 These rules apply to all code in the `atlas-api` folder (Java Quarkus backend). Follow them strictly.
 
-When a rule here conflicts with your default habits, the rule wins. When unsure, match the surrounding code.
+They are in addition to shared.instructions.md, which covers naming, documentation comments, the no-comments rule, type safety, formatting and testing rules common to backend and frontend. Read both.
 
----
+PRs that break the rules marked **(Can't approve)** should always be reported as 🟡 Required and force needing changes.
+
+When a rule here conflicts with your default habits, the rule wins. When unsure, match the surrounding code.
 
 ## 1. Architecture and Layering
 
@@ -15,24 +17,16 @@ When a rule here conflicts with your default habits, the rule wins. When unsure,
 - **Mappers (MapStruct)**: all conversion between entities and DTOs.
 - Do not let entities leak out of the service layer into controllers' responses; expose DTOs.
 
----
-
 ## 2. DTOs
 
-- Top-level DTOs (used directly as a request body or response body) follow the naming convention: `NameRequest` / `NameResponse`.
-- Nested DTOs (only ever used inside another DTO) follow the naming convention: `NameDto`.
-- **Never** use the suffix `Payload`.
+- Naming follows `shared.instructions.md` (`NameRequest` / `NameResponse` / `NameDto`, never `Payload`).
 - Use **MapStruct** to convert to and from DTOs. Do not hand-write mapping code in services or controllers.
-
----
 
 ## 3. Controllers
 
-- **Return the DTO directly.** Avoid returning `Response` / `ResponseEntity`-style wrappers.
+- **Return the DTO directly.** Do not return `Response` / `ResponseEntity`-style wrappers.
   - The only exception: when you need a body together with a status that does not normally carry one by default (e.g. `201 Created`).
 - **Do not use Javadoc in controllers.** Use OpenAPI annotations (`@Tag`, `@Operation`, `@APIResponse`, etc.) for class and method descriptions.
-
----
 
 ## 4. Error Handling
 
@@ -41,47 +35,20 @@ When a rule here conflicts with your default habits, the rule wins. When unsure,
 - **Do not catch an exception just to rethrow it** (including wrapping and re-throwing without adding real value). Let it propagate.
 - Error messages must be descriptive and say what was wrong and with which value or identifier where safe to do so.
 
----
-
-## 5. Code Size Limits
-
-- **Methods:** maximum 60 lines. Approaching this means extract helper methods.
-- **Classes:** ideally 100 to 300 lines. **PRs with classes over 500 lines should be flagged.**
-- **Folders:** past 5 files, split into subfolders by responsibility. Conversely, 5 folders with 1 file each should be questioned.
-
----
-
-## 6. Naming Conventions
-
+## 5. Naming (Backend Specifics)
 - Casing follows Java and Quarkus conventions (`PascalCase` classes, `camelCase` methods and variables, `lowerdotcase` packages).
-- **Constants:** always `SCREAMING_SNAKE_CASE`.
-- **Booleans** must start with a verb signalling yes/no: `is`, `has`, `can` (e.g. `isActive`, `hasPermission`). Never bare names like `active`.
-- Names must not encode the subfolder/package they live in (no `uiUserCard`, no `apiUserService`).
 - **SQL:** commands in `UPPERCASE`; table, column and other object names in `snake_case`.
-- DTO naming: see section 2.
 
----
+## 6. Documentation and Comments
 
-## 7. Documentation and Comments
+Use Javadoc, following the rules in `shared.instructions.md`, with these backend specifics:
 
-### Javadoc is required for
-- All classes, **except**:
-  - classes inheriting from an interface/abstract class that already carries the comment,
-  - MapStruct mappers,
-  - Panache repositories.
-- All non-constructor methods, **including private ones**, unless the method overrides a parent method that already carries the comment.
-- If an overriding method meaningfully diverges from the parent's documented contract, document the child.
+- Classes that do not need Javadoc, in addition to those inheriting an already-documented parent:
+  - MapStruct mappers
+- **Controllers use no Javadoc.** Use OpenAPI annotations instead (see section 3).
+- The only non-Javadoc comments permitted are the AAA markers in tests and the `-- rollback:` comment and a single-line header comment in migration scripts (section 7).
 
-### Javadoc is not used for
-- Controllers (use OpenAPI annotations instead, see section 3).
-
-### No other comments
-- Do not leave inline, block, TODO, or commented-out code comments. PRs doing this should be flagged. Make the code readable through clear names and small methods.
-- Only permitted non-Javadoc comments:
-  - `// Arrange`, `// Act`, `// Assert` in tests (section 9),
-  - the `-- rollback:` comment in migration scripts (section 8).
-
-## 8. Database and Migrations
+## 7. Database and Migrations
 
 - Every migration script must end with its rollback, commented out.
 
@@ -98,17 +65,17 @@ Multiple statements:
 -- DELETE FROM roles
 ```
 
+- A header is allowed in comments at the top. It must be a single line. E.g. `-- V1.0.0. Create roles table`
 - SQL keywords `UPPERCASE`, names `snake_case`.
 - Never edit a migration that has already been merged; add a new one.
 
-## 9. Testing
+## 8. Testing (Backend Specifics)
 
 - Tests live in a mirrored `tests/` tree matching the main source structure.
 - **Test names:** `<methodName>_<conditionIfAny>_<result>`
   - `getUsers_WhenUserIsNotAdmin_ReturnsForbidden`
   - `getUsers_ReturnsUsers`
-- **AAA comments:** every test, **except integration tests**, must contain `// Arrange`, `// Act` and `// Assert` marking each section. Omit a marker only if that section is empty.
-- Maintain **80% test coverage**. New code should come with tests.
+- AAA comments are required in every test, **except integration tests** (see `shared.instructions.md`)
 
 Example:
 
@@ -126,43 +93,41 @@ void getUsers_WhenUserIsNotAdmin_ReturnsForbidden() {
 }
 ```
 
-## 10. Type Safety
+## 9. Type Safety (Backend Specifics)
 
-- `any`-equivalents are not allowed outside tests: no raw types, no unnecessary `Object`, no unchecked casts or blanket `@SuppressWarnings("unchecked")`. Use proper generics and specific types.
+- `any`-equivalents in Java are: raw types, unnecessary `Object`, unchecked casts and blanket `@SuppressWarnings("unchecked")`. Use proper generics and specific types. All except suppressing warnings are allowed in tests only.
 
-## 11. Formatting
+## 10. Formatting (Backend Specifics)
 
 - Formatting is handled by the provided IDE config (IntelliJ and VS Code). That should be used rather than user defaults.
-- Do not manually override or fight automated formatting.
 
-## 12. Dependency Injection and Quarkus Conventions
+## 11. Dependency Injection and Quarkus Conventions
 
 - Prefer constructor injection over field injection.
 - Use the narrowest CDI scope that works (`@ApplicationScoped` by default for services).
 - Put `@Transactional` on service methods, not controllers or repositories.
 - Configuration comes from `application.yml` / `@ConfigMapping`, never hard-coded values.
 
-## 13. Logging
+## 12. Logging
 
 - Use the project's standard logger (e.g. `org.jboss.logging.Logger`), never `System.out` / `printStackTrace()`.
 - Never log secrets, tokens, passwords or personal data.
 - Log at the boundary where an error is actually handled, not at every layer it passes through.
 
-## 14. Security and Validation
+## 13. Security and Validation
 
 - Validate request DTOs with Bean Validation annotations (`@NotNull`, `@Valid`, etc.).
 - Never trust client-supplied identifiers for authorization; check permissions in the service layer.
 - No secrets or credentials in code or committed config.
 
-## 15. Before You Finish: Checklist
+## 14. Before You Finish: Checklist
 
+Complete the shared checklist in `shared.instructions.md`, then:
 - [ ] Business logic is in services; controllers/repositories are thin
-- [ ] DTOs named `NameRequest` / `NameResponse` / `NameDto` (never `Payload`), mapped with MapStruct
-- [ ] Controllers return DTOs directly (wrapper only for body + status like 201)
+- [ ] DTOs mapped with MapStruct
+- [ ] Controllers return DTOs directly (wrapper only for body + status like 201); no Javadoc in controllers
 - [ ] No custom exceptions, no new exception mappers, no catch-and-rethrow
 - [ ] Methods ≤ 60 lines, classes ≤ 300 lines (never > 500)
-- [ ] Booleans start with `is` / `has` / `can`; constants are `SCREAMING_SNAKE_CASE`
-- [ ] Javadoc on all required classes and methods; OpenAPI (not Javadoc) in controllers
-- [ ] No other comments anywhere
+- [ ] BNo Javadoc on MapStruct mappers
 - [ ] Migrations end with a commented `-- rollback:`
-- [ ] Tests added, named `<method>_<condition>_<result>`, with AAA comments
+- [ ] Tests named `<method>_<condition>_<result>`, in the mirrored `tests/` tree
