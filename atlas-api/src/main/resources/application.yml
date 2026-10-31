@@ -8,6 +8,10 @@ app:
     verification:
       code-pepper: ${VERIFICATION_CODE_PEPPER}
       code-lifetime: PT15M
+    resend-verification:
+      per-email-limit: 3
+      per-client-address-limit: 20
+      window: PT1H
 
 smallrye:
   jwt:

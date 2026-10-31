@@ -12,9 +12,11 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @ApplicationScoped
 public class PasswordHasher {
     private final int cost;
+    private final String unmatchableHash;
 
     public PasswordHasher(@ConfigProperty(name = "app.auth.bcrypt-cost") int cost) {
         this.cost = cost;
+        this.unmatchableHash = BcryptUtil.bcryptHash("no password is checked against this", cost);
     }
 
     /**
@@ -26,5 +28,22 @@ public class PasswordHasher {
      */
     public String hash(String password) {
         return BcryptUtil.bcryptHash(password, cost);
+    }
+
+    /**
+     * Checks a password against a stored hash. When there is no stored hash, because no account uses the address, the
+     * password is still checked against a throwaway hash of the same cost, so the response time does not reveal which
+     * addresses are registered.
+     *
+     * @param password the plain-text password
+     * @param hash the stored bcrypt hash, or null when there is no account
+     * @return true only if there is a hash and the password matches it
+     */
+    public boolean matches(String password, String hash) {
+        if (hash == null) {
+            BcryptUtil.matches(password, unmatchableHash);
+            return false;
+        }
+        return BcryptUtil.matches(password, hash);
     }
 }

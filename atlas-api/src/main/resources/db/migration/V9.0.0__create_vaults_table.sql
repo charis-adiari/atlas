@@ -1,4 +1,4 @@
--- V9.0.0: vaults. A vault belongs to exactly one user; a user can have many vaults.
+-- V3.0.0: vaults. A vault belongs to exactly one user; a user can have many vaults.
 
 CREATE TABLE vaults (
     id              uuid         PRIMARY KEY DEFAULT gen_random_uuid(),

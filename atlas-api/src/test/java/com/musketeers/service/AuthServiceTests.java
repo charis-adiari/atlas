@@ -1,12 +1,15 @@
 package com.musketeers.service;
 
 import com.musketeers.domain.auth.User;
+import com.musketeers.domain.User;
+import com.musketeers.dto.AccessTokenResponse;
 import com.musketeers.dto.SignupResponse;
 import com.musketeers.repository.auth.UserRepository;
 import com.musketeers.service.auth.AuthService;
 import com.musketeers.service.auth.PasswordHasher;
 import com.musketeers.service.auth.TokenService;
 import jakarta.persistence.PersistenceException;
+import jakarta.ws.rs.NotAuthorizedException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,8 +17,8 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import java.time.Instant;
+
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,19 +49,17 @@ public class AuthServiceTests {
     ArgumentCaptor<User> saved;
 
     @Test
-    void signup_ReturnsAccessTokenWithoutUserDetails() {
+    void signup_ReportsThatVerificationIsRequiredAndIssuesNoAccessToken() {
         // Arrange
         when(hasher.hash(PASSWORD)).thenReturn(HASH);
-        when(tokenService.issue(any(User.class))).thenReturn(ACCESS_TOKEN);
-        when(tokenService.getTtlSeconds()).thenReturn(TTL_SECONDS);
 
         // Act
-        SignupResponse result = service.signup(EMAIL, PASSWORD);
+        SignupResponse result = service.signup("Ada@Example.COM", PASSWORD);
 
         // Assert
-        assertEquals(ACCESS_TOKEN, result.accessToken());
-        assertEquals("Bearer", result.tokenType());
-        assertEquals(TTL_SECONDS, result.expiresIn());
+        assertEquals(SignupResponse.VERIFICATION_REQUIRED, result.status());
+        assertEquals(EMAIL, result.email());
+        verifyNoInteractions(tokenService);
     }
 
     @Test
@@ -184,5 +185,113 @@ public class AuthServiceTests {
         // Assert
         assertSame(failure, thrown);
         verifyNoInteractions(tokenService, emailVerificationService);
+    }
+
+    @Test
+    void verifyEmail_IssuesAnAccessTokenForTheVerifiedUser() {
+        // Arrange
+        User user = verifiedUser();
+        when(emailVerificationService.verify(VERIFICATION_TOKEN)).thenReturn(user);
+        when(tokenService.issue(user)).thenReturn(ACCESS_TOKEN);
+        when(tokenService.getTtlSeconds()).thenReturn(TTL_SECONDS);
+
+        // Act
+        AccessTokenResponse result = service.verifyEmail(VERIFICATION_TOKEN);
+
+        // Assert
+        assertEquals(ACCESS_TOKEN, result.accessToken());
+        assertEquals("Bearer", result.tokenType());
+        assertEquals(TTL_SECONDS, result.expiresIn());
+    }
+
+    @Test
+    void verifyEmail_WhenTheTokenIsRejected_IssuesNoAccessToken() {
+        // Arrange
+        when(emailVerificationService.verify(VERIFICATION_TOKEN)).thenThrow(new IllegalArgumentException("bad"));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> service.verifyEmail(VERIFICATION_TOKEN));
+        verifyNoInteractions(tokenService);
+    }
+
+    @Test
+    void login_WhenPasswordIsRightAndEmailIsVerified_IssuesAnAccessToken() {
+        // Arrange
+        User user = verifiedUser();
+        when(repository.findByEmailIgnoreCase(EMAIL)).thenReturn(user);
+        when(hasher.matches(PASSWORD, HASH)).thenReturn(true);
+        when(tokenService.issue(user)).thenReturn(ACCESS_TOKEN);
+        when(tokenService.getTtlSeconds()).thenReturn(TTL_SECONDS);
+
+        // Act
+        AccessTokenResponse result = service.login("Ada@Example.COM", PASSWORD);
+
+        // Assert
+        assertEquals(ACCESS_TOKEN, result.accessToken());
+        assertEquals("Bearer", result.tokenType());
+        assertEquals(TTL_SECONDS, result.expiresIn());
+    }
+
+    @Test
+    void login_WhenPasswordIsWrong_ThrowsNotAuthorizedExceptionWithGenericMessage() {
+        // Arrange
+        when(repository.findByEmailIgnoreCase(EMAIL)).thenReturn(verifiedUser());
+        when(hasher.matches(PASSWORD, HASH)).thenReturn(false);
+
+        // Act
+        NotAuthorizedException ex = assertThrows(NotAuthorizedException.class, () -> service.login(EMAIL, PASSWORD));
+
+        // Assert
+        assertEquals(AuthService.INVALID_CREDENTIALS_MESSAGE, ex.getMessage());
+        verifyNoInteractions(tokenService);
+    }
+
+    @Test
+    void login_WhenNoAccountUsesTheEmail_StillChecksThePasswordAndThrowsTheSameException() {
+        // Arrange
+        when(repository.findByEmailIgnoreCase(EMAIL)).thenReturn(null);
+
+        // Act
+        NotAuthorizedException ex = assertThrows(NotAuthorizedException.class, () -> service.login(EMAIL, PASSWORD));
+
+        // Assert
+        assertEquals(AuthService.INVALID_CREDENTIALS_MESSAGE, ex.getMessage());
+        verify(hasher).matches(PASSWORD, null);
+        verifyNoInteractions(tokenService);
+    }
+
+    @Test
+    void login_WhenPasswordIsWrongAndEmailIsUnverified_ThrowsNotAuthorizedExceptionRatherThanRevealingTheAccount() {
+        // Arrange
+        User user = verifiedUser();
+        user.emailVerifiedAt = null;
+        when(repository.findByEmailIgnoreCase(EMAIL)).thenReturn(user);
+        when(hasher.matches(PASSWORD, HASH)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(NotAuthorizedException.class, () -> service.login(EMAIL, PASSWORD));
+    }
+
+    @Test
+    void login_WhenPasswordIsRightButEmailIsUnverified_ThrowsIllegalArgumentException() {
+        // Arrange
+        User user = verifiedUser();
+        user.emailVerifiedAt = null;
+        when(repository.findByEmailIgnoreCase(EMAIL)).thenReturn(user);
+        when(hasher.matches(PASSWORD, HASH)).thenReturn(true);
+
+        // Act & Assert
+        IllegalArgumentException exception =
+                assertThrows(IllegalArgumentException.class, () -> service.login(EMAIL, PASSWORD));
+        assertEquals(AuthService.EMAIL_NOT_VERIFIED_MESSAGE, exception.getMessage());
+        verifyNoInteractions(tokenService);
+    }
+
+    private static User verifiedUser() {
+        User user = new User();
+        user.email = EMAIL;
+        user.passwordHash = HASH;
+        user.emailVerifiedAt = Instant.now();
+        return user;
     }
 }
