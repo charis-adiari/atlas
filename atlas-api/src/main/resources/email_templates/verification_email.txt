@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify your email | Atlas</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
+
+    html {
+      font-size: 16px;
+    }
+
+    :root {
+      --bg: #0A0C14;
+      --bg-light-2: #121522;
+      --bg-light-4: #23293D;
+      --text: #FFFFFF;
+      --text-muted: #AEB4C6;
+      --accent: #48E083;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Manrope', sans-serif;
+      padding: 1.25rem;
+    }
+
+    .email-card {
+      width: 100%;
+      max-width: 36rem;
+      min-height: 33.25rem;
+      background: var(--bg);
+      border-radius: 18px;
+      padding: 3rem 4rem 2rem;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.66rem;
+      margin-bottom: 4.33rem;
+    }
+
+    .brand img {
+      width: 1.81rem;
+      height: 1.5rem;
+      object-fit: contain;
+    }
+
+    .heading {
+      font-size: 1.5rem;
+      line-height: 1.4;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .description {
+      max-width: 390px;
+      margin: 0 auto 28px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    .verification-code {
+      width: 100%;
+      min-height: 68px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 12px;
+      border: 1px solid var(--bg-light-4);
+      border-radius: 13px;
+      background: var(--bg-light-2);
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      line-height: 1.2;
+    }
+
+    .expiration {
+      margin-bottom: 6px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .expiration strong {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .ignore-message {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      margin-top: 38px;
+      padding-top: 24px;
+      border-top: 1px solid var(--bg-light-4);
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .footer a:hover {
+      color: var(--text);
+    }
+
+    .footer .separator {
+      color: var(--text-muted);
+    }
+
+    .company-address {
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 12px;
+      }
+
+      .email-card {
+        min-height: auto;
+        padding: 36px 22px 28px;
+      }
+
+      .brand {
+        margin-bottom: 24px;
+      }
+
+      .heading {
+        font-size: 22px;
+      }
+
+      .description {
+        font-size: 12px;
+      }
+
+      .verification-code {
+        gap: 10px;
+        min-height: 62px;
+        font-size: 30px;
+        letter-spacing: 1px;
+      }
+
+      .footer {
+        margin-top: 32px;
+        padding-top: 22px;
+      }
+
+      .footer-links {
+        gap: 12px;
+      }
+
+      .company-address {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="email-card">
+
+    <header class="brand">
+      <img src="atlas-logo.svg" alt="Atlas logo" />
+    </header>
+
+    <section class="content">
+      <h1 class="heading">Verify your email address</h1>
+
+      <p class="description">
+        Enter this verification code in your browser to finish creating your
+        account:
+      </p>
+
+      <div class="verification-code" aria-label="Verification code: 482917">
+        <span>4</span>
+        <span>8</span>
+        <span>2</span>
+        <span>9</span>
+        <span>1</span>
+        <span>7</span>
+      </div>
+
+      <p class="expiration">
+        This code will expire in <strong>15 minutes</strong>.
+      </p>
+
+      <p class="ignore-message">
+        If you didn't request this code, you can safely ignore this email.
+      </p>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-links">
+        <span>Help Center</span>
+        <span class="separator">&bull;</span>
+        <span>Privacy Policy</span>
+        <span class="separator">&bull;</span>
+        <span>Terms of Service</span>
+      </div>
+
+      <p class="company-address">
+        Atlas Technologies Inc., 100 Montgomery St, Suite 1900,
+        San Francisco, CA 94104
+      </p>
+    </footer>
+
+  </main>
+</body>
+
+</html>
