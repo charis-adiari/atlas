@@ -1,7 +1,6 @@
 package com.musketeers.service.auth;
 
 import com.musketeers.domain.auth.User;
-import com.musketeers.domain.User;
 import com.musketeers.dto.AccessTokenResponse;
 import com.musketeers.dto.SignupResponse;
 import com.musketeers.repository.auth.UserRepository;

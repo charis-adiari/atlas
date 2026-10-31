@@ -19,13 +19,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Proves that a user owns their email address. A random 6-digit code is emailed and its hash is stored. A token
- * works once and until it expires.
+ * Service to generate, manage and store a random 6-digit code that proves that a user owns their email
  */
 @ApplicationScoped
 public class VerificationCodeService {
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final int MIN_PEPPER_BYTES = 32;
+    private static final String SIX_DIGIT_FORMAT = "%06d";
 
     private final SecureRandom secureRandom = new SecureRandom();
     private final EmailVerificationCodeRepository emailVerificationCodeRepository;
@@ -50,7 +50,7 @@ public class VerificationCodeService {
     @Transactional
     public String generateCode(UUID userId) {
         int value = secureRandom.nextInt(1_000_000);
-        String codeString = String.format("%06d", value);
+        String codeString = String.format(SIX_DIGIT_FORMAT, value);
         byte[] codeHash = hashCode(userId, codeString);
 
         Optional<EmailVerificationCode> existingCode = emailVerificationCodeRepository.findByUserId(userId);
@@ -97,16 +97,8 @@ public class VerificationCodeService {
      * @return
      */
     public boolean matches(UUID userId, String submittedCode, byte[] storedHash) {
-        byte[] candidate = hashCode(userId, normalize(submittedCode));
+        String normalisedCode = submittedCode == null ? "" : submittedCode.replaceAll("[\\s-]", "");
+        byte[] candidate = hashCode(userId, normalisedCode);
         return MessageDigest.isEqual(candidate, storedHash);
-    }
-
-    /**
-     * Strips whitespace and hyphens so "123 456" matches "123456"
-     * @param input
-     * @return
-     */
-    private String normalize(String input) {
-        return input == null ? "" : input.replaceAll("[\\s-]", "");
     }
 }
