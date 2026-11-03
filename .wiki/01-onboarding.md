@@ -16,6 +16,8 @@ Each subfolder has its own README with the exact commands to run that project. T
 1. [Tools for the Database](#tools-for-the-database)
     - [WSL (Windows only)](#wsl)
     - [Rancher Desktop](#rancher-desktop)
+1. [Tools for AI PR review](#tools-for-ai-pr-review)
+    - [Install GitHub CLI](#install-github-cli)
 1. [Recommended IDE / editor](#recommended-ide--editor)
 1. [Next Steps](#next-steps)
 
@@ -111,6 +113,27 @@ Using Docker through a GUI is more convenient. Rancher Desktop is recommended.
 
 
 Once installed, check the [API README](../atlas-api/README.md) for the command to spin up the database container.
+
+## Tools for AI PR Review
+### Install GitHub CLI
+
+The GitHub CLI (`gh`) lets you interact with GitHub directly from your terminal.
+
+1. **Install the GitHub CLI.** Follow the instructions for your operating system in the [official installation guide](https://cli.github.com/). Make sure to accept the T&Cs.
+
+2. **Log in to GitHub.** Run the following command in your terminal:
+   ```bash
+   gh auth login
+   ```
+   Follow the prompts to select GitHub.com, choose HTTPS Git operations and authenticate using your preferred method. If prompted to authenticate Git with your GitHub credentials, agree and complete authentication in your browser.
+
+3. **Verify your setup.** Run:
+   ```bash
+   gh auth status
+   ```
+   You should see confirmation that you're authenticated with GitHub.
+
+You're now ready to use the GitHub CLI from your terminal.
 
 ## Recommended IDE / Editor
 
