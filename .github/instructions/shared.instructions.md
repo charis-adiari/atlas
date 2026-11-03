@@ -66,7 +66,7 @@ The stack-specific files list additional inclusions and exclusions.
 - [ ] No folder or package names encoded in identifiers
 - [ ] DTOs named `NameRequest` / `NameResponse` / `NameDto`, never `Payload`
 - [ ] Documentation comments on all required classes and methods
-- [ ] No other comments other than TODOs with an issue number and AAA markers in tests **(Can't approve)**
+- [ ] No comments other than TODOs with an issue number and AAA markers in tests
 - [ ] No `any`-equivalents outside tests
 - [ ] Automated formatting applied and not overridden
 - [ ] Tests added with AAA comments; coverage stays at or above 80%

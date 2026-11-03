@@ -324,20 +324,25 @@ Strip the extension for import-style paths: search `VerificationCodeForm`, not `
  
 A hit outside the PR's own changed files is a dangling reference. Record it as **Critical** if it would fail the build or throw at runtime, or **Required** if it is unreachable dead code left behind.
  
-### Step 13: Verify TODO comments
+### Step 13: Verify comments and TODOs
  
-Scan the added lines (`+` lines) of the diff from Step 3 for `TODO` comments.
+Scan the added lines (`+` lines) of the diff from Step 3 for any inline or block comments. This includes `// ...`, `/* ... */`, and any `* ...` content inside a block comment. The only allowed code comments are defined in the instructions files. Generally, only these are allowed
  
-Apply the comment rules from the standards fetched in Step 4. Where the TODO has an issue number, check that the number is a real issue:
+- `// Arrange`, `// Act`, `// Assert` in tests
+- `// TODO #1234: ...` with a real issue number
+- any documentation comment required by the language standards (for example JSDoc/TSDoc on public APIs, when the diff adds them)
+ 
+Anything else is a violation of the no-other-comments rule in the standards.
+ 
+Apply the comment rules from the standards fetched in Step 4. For every comment candidate found in added code, classify it.
  
 ```
 gh issue view <issue-number> -R $REPO --json number,title,state
 ```
  
-- The issue exists → the TODO is valid.
-- The command fails because the issue cannot be resolved (nonexistent number, or a number that is not an issue) → treat it exactly like a TODO **without** an issue number.
-- A TODO without an issue number is a violation of the no-other-comments rule.
-Record each TODO with its file, line and result.
+- non-allowed comments → **Suggestion** finding
+ 
+Do not limit the scan to `TODO` only. This check must catch ordinary explanatory comments like `// Noticing the link...` just as it catches TODOs.
  
 ### Step 14: PR description
 
