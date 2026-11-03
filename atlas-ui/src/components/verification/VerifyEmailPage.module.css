@@ -1,0 +1,58 @@
+.main {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 26.25rem;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  text-align: center;
+}
+
+.mark,
+.markFailed {
+  display: grid;
+  place-items: center;
+  width: 3.625rem;
+  height: 3.625rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 1rem;
+}
+
+.mark {
+  background: var(--success-surface);
+  color: var(--success);
+}
+
+.markFailed {
+  background: var(--warning-surface);
+  color: var(--warning);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.text {
+  margin: 0.625rem 0 1.375rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.link {
+  color: var(--primary-link);
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

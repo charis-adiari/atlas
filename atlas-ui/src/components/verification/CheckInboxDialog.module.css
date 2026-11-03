@@ -1,0 +1,62 @@
+.centered {
+  text-align: center;
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 3.625rem;
+  height: 3.625rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 1rem;
+  background: #241a45;
+  color: var(--primary-link);
+}
+
+.title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.text {
+  margin: 0.625rem 0 1.375rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.text strong {
+  color: var(--foreground);
+}
+
+.link {
+  display: block;
+  margin: 1rem auto 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary-link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.note {
+  margin-top: 1.375rem;
+  padding-top: 1.125rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.action {
+  justify-content: center;
+  width: 100%;
+}

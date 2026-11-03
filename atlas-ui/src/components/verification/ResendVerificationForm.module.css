@@ -1,0 +1,17 @@
+.form {
+  display: grid;
+  gap: 0.875rem;
+  margin-bottom: 1.375rem;
+  text-align: left;
+}
+
+.sent {
+  margin-bottom: 1.375rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.action {
+  justify-content: center;
+  width: 100%;
+}
