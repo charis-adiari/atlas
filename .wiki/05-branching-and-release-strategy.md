@@ -26,7 +26,7 @@ feature/*    --->   dev   --->  main
 
 ### Everyday workflow
 
-1. Branch off `dev`: `feature/<ticket-number>/short-description` or `bugfix/<ticket-number>/short-description`.
+1. Branch off `dev`: `feature/<story-ticket-number>/short-description` or `bugfix/<story-ticket-number>/short-description`.
 2. Keep branches short-lived — aim for days, not weeks. Merge frequently to avoid large conflicts.
 3. Open a PR into `dev`. Requires approval(s) and passing CI.
 4. If a feature isn't finished in time for the next dev release, wrap it in a feature flag rather than holding the branch open. This lets us keep merging to `dev` continuously.
@@ -53,7 +53,7 @@ Once production is live, urgent fixes that can't wait for the next `dev` to `mai
 
 ### Branch naming conventions
 
-- `feature/<ticket-number>/<short-description>` - new functionality
-- `bugfix/<ticket-number>/<short-description>` - non-urgent fixes
-- `hotfix/<ticket-number>/<short-description>` - urgent production fixes
+- `feature/<story-ticket-number>/<short-description>` - new functionality
+- `bugfix/<story-ticket-number>/<short-description>` - non-urgent fixes
+- `hotfix/<story-ticket-number>/<short-description>` - urgent production fixes
 - Use lowercase, hyphen/underscore-separated descriptions (e.g., `feature/5/user-onboarding-flow`)

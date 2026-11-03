@@ -109,7 +109,7 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
 
 ### Type Safety
 
-- `var` and `any`-equivalents are not allowed except in tests.
+- `any`-equivalents are not allowed except in tests.
 
 ### Testing
 - Tests live in a mirrored `tests/` tree
@@ -117,4 +117,4 @@ This extends the [root style guide](../README.md#code-style-guide). Rules here a
   e.g. `getUsers_WhenUserIsNotAdmin_ReturnsForbidden`, `getUsers_ReturnsUsers`, etc.
 - Every test, excluding integration tests, must include AAA comments (`// Arrange`, `// Act`, `// Assert`) marking
   each section, unless the section is empty.
-- A test coverage of 80% must be maintained
+- A test coverage of 80% must be maintained
