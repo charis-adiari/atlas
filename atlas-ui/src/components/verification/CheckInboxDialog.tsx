@@ -29,8 +29,6 @@ export function CheckInboxDialog({
 }: CheckInboxDialogProps) {
   const titleId = useId();
   const countdown = useResendCountdown();
-  // Noticing the link signs the user in, which re-renders the parent with a new callback. Reading it through an effect
-  // event keeps the check that noticed it from being cancelled by that re-render.
   const notifyVerified = useEffectEvent(onVerified);
 
   useEffect(() => {
