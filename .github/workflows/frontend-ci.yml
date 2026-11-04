@@ -43,13 +43,13 @@ jobs:
         run: npm ci
 
       - name: Check formatting
-        run: npx prettier --check .
+        run: npm run prettier
 
       - name: Lint
         run: npm run lint
 
-      # - name: Run Tests
-      #   run: npm test
+      - name: Run Tests
+        run: npm run test
 
       - name: Build Project
         run: npm run build
