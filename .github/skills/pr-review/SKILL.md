@@ -311,7 +311,7 @@ git show "$HEAD_SHA:.github/pull_request_template.md"
 
 If no template is found in either place, skip this step and record "No PR template found on `$BASE` or in the local clone" for Limitations.
 
-Compare template against the PR's description. If it does not match, record one mismatch listing the missing or unfilled sections. If the only gap is a screenshots section already recorded in Step 13, report it once, not twice.
+Compare template against the PR's description. If it does not match, record one mismatch listing the missing or unfilled sections as a 🔵 Suggestion. If the only gap is a screenshots section already recorded in Step 13, report it once, not twice.
 
 ## Analysis and Output
 
