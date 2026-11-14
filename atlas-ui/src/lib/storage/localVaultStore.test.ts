@@ -53,7 +53,7 @@ describe('LocalVaultStore', () => {
     await expect(store.getLastVisit()).resolves.toBe('2026-11-14T10:20:00.000Z');
   });
 
-  it('initializes visit metadata when recording the first visit', async () => {
+  it('initialises visit metadata when recording the first visit', async () => {
     // Arrange
     const store = new LocalVaultStore();
 
