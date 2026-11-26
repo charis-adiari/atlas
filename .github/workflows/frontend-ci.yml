@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - develop
-      - 'release/**'
     paths:
       - 'atlas-ui/**'
       - '.github/workflows/frontend-ci.yml'
@@ -13,7 +12,6 @@ on:
     branches:
       - main
       - develop
-      - 'release/**'
     paths:
       - 'atlas-ui/**'
       - '.github/workflows/frontend-ci.yml'
@@ -43,13 +41,13 @@ jobs:
         run: npm ci
 
       - name: Check formatting
-        run: npx prettier --check .
+        run: npm run prettier:check
 
       - name: Lint
         run: npm run lint
 
-      # - name: Run Tests
-      #   run: npm test
+      - name: Run Tests
+        run: npm run test:ci
 
       - name: Build Project
         run: npm run build

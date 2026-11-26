@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "prettier:check": "prettier . --check",
     "prettier": "prettier . --write",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test": "vitest",
+    "test:ci": "vitest run --coverage"
   },
   "dependencies": {
     "axios": "^1.20.0",
